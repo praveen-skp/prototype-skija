@@ -56,44 +56,49 @@ public class List extends Scrollable implements ICustomWidget {
 		WNDCLASS lpWndClass = new WNDCLASS();
 		OS.GetClassInfo(0, ListClass, lpWndClass);
 		ListProc = lpWndClass.lpfnWndProc;
-		DPIZoomChangeRegistry.registerHandler(List::handleDPIChange,
-				List.class);
+		DPIZoomChangeRegistry.registerHandler(List::handleDPIChange, List.class);
 	}
 
 	java.util.List<String> lines = new ArrayList<>();
+	java.util.List<Integer> selectedLines = new ArrayList<>();
 
+	Integer topIndex = 0;
+	Integer lastSelectedItem = 0;
+	private int previousVerticalScrollPosition = 0;
 	private Listener listener;
 	private boolean hasMouseEntered;
+	private static final Color SELECTION_COLOR = new Color(Display.getDefault(), 0, 95, 184);
+	private static final Color HOVER_COLOR = new Color(Display.getDefault(), 224, 238, 254);
 
 	/**
-	 * Constructs a new instance of this class given its parent and a style
-	 * value describing its behavior and appearance.
+	 * Constructs a new instance of this class given its parent and a style value
+	 * describing its behavior and appearance.
 	 * <p>
 	 * The style value is either one of the style constants defined in class
-	 * <code>SWT</code> which is applicable to instances of this class, or must
-	 * be built by <em>bitwise OR</em>'ing together (that is, using the
-	 * <code>int</code> "|" operator) two or more of those <code>SWT</code>
-	 * style constants. The class description lists the style constants that are
+	 * <code>SWT</code> which is applicable to instances of this class, or must be
+	 * built by <em>bitwise OR</em>'ing together (that is, using the
+	 * <code>int</code> "|" operator) two or more of those <code>SWT</code> style
+	 * constants. The class description lists the style constants that are
 	 * applicable to the class. Style bits are also inherited from superclasses.
 	 * </p>
 	 *
-	 * @param parent
-	 *            a composite control which will be the parent of the new
-	 *            instance (cannot be null)
-	 * @param style
-	 *            the style of control to construct
+	 * @param parent a composite control which will be the parent of the new
+	 *               instance (cannot be null)
+	 * @param style  the style of control to construct
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the parent is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the parent
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the parent</li>
-	 *                <li>ERROR_INVALID_SUBCLASS - if this class is not an
-	 *                allowed subclass</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     parent</li>
+	 *                                     <li>ERROR_INVALID_SUBCLASS - if this
+	 *                                     class is not an allowed subclass</li>
+	 *                                     </ul>
 	 *
 	 * @see SWT#SINGLE
 	 * @see SWT#MULTI
@@ -102,36 +107,49 @@ public class List extends Scrollable implements ICustomWidget {
 	 */
 	public List(Composite parent, int style) {
 		super(parent, checkStyle(style));
+		addListeners();
+		showScrollBar();
+	}
 
+	private void showScrollBar() {
+		if (verticalBar != null) {
+			verticalBar.setVisible(true);
+		}
+		if (horizontalBar != null) {
+			horizontalBar.setVisible(true);
+		}
+	}
+
+	private void addListeners() {
 		listener = event -> {
 			switch (event.type) {
-				case SWT.Dispose :
-					onDispose(event);
-					break;
-				case SWT.MouseDown :
-					onMouseDown(event);
-					break;
-				case SWT.MouseUp :
-					onMouseUp(event);
-					break;
-				case SWT.Paint :
-					onPaint(event);
-					break;
-				case SWT.Resize :
-					onResize();
-					break;
-				case SWT.FocusIn :
-					onFocusIn();
-					break;
-				case SWT.FocusOut :
-					onFocusOut();
-					break;
-				case SWT.Traverse :
-					onTraverse(event);
-					break;
-				case SWT.Selection :
-					onSelection(event);
-					break;
+			case SWT.Dispose:
+				onDispose(event);
+				break;
+			case SWT.MouseDown:
+				onMouseDown(event);
+				break;
+			case SWT.MouseUp:
+				onMouseUp(event);
+				break;
+			case SWT.Paint:
+				onPaint(event);
+				break;
+			case SWT.Resize:
+				onResize();
+				break;
+			case SWT.FocusIn:
+				onFocusIn();
+				break;
+			case SWT.FocusOut:
+				onFocusOut();
+				break;
+			case SWT.Traverse:
+				onTraverse(event);
+				break;
+			case SWT.Selection:
+				onSelection(event);
+				break;
 			}
 		};
 		addListener(SWT.Dispose, listener);
@@ -145,11 +163,36 @@ public class List extends Scrollable implements ICustomWidget {
 		addListener(SWT.Traverse, listener);
 		addListener(SWT.Selection, listener);
 
+		ScrollBar horizontalBar = getHorizontalBar();
+		if (horizontalBar != null) {
+			horizontalBar.addSelectionListener(new SelectionAdapter() {
+
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					super.widgetSelected(e);
+					List.this.scrollBarSelectionChanged(e);
+				}
+			});
+		}
+		ScrollBar verticalBar = getVerticalBar();
+		if (verticalBar != null) {
+			verticalBar.addSelectionListener(new SelectionAdapter() {
+
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					super.widgetSelected(e);
+					List.this.topIndex = verticalBar.getSelection();
+					List.this.scrollBarSelectionChanged(e);
+				}
+			});
+		}
+
 		addKeyListener(new KeyListener() {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				onKeyReleased(e);
 			}
+
 			@Override
 			public void keyPressed(KeyEvent e) {
 				onKeyPressed(e);
@@ -162,6 +205,7 @@ public class List extends Scrollable implements ICustomWidget {
 			public void mouseEnter(MouseEvent e) {
 				if (!hasMouseEntered) {
 					hasMouseEntered = true;
+					System.out.println("Mouse is at at: " + e.x + " " + e.y);
 					redraw();
 				}
 			}
@@ -173,20 +217,122 @@ public class List extends Scrollable implements ICustomWidget {
 			}
 
 		});
+	}
+
+	private void updateScrollBarWithTextSize() {
+		Rectangle clientArea = getClientArea();
+		int height = clientArea.height;
+		int thumb = height / getLineHeight();
+		verticalBar.setMaximum(this.lines.size());
+		verticalBar.setMinimum(0);
+		verticalBar.setThumb(thumb);
+
+		Point maxTextSize = computeTextSize();
+		horizontalBar.setThumb(clientArea.width / maxTextSize.x);
+		horizontalBar.setMaximum(maxTextSize.x);
+		horizontalBar.setMinimum(0);
+//		if (verticalBar != null) {
+//			if (maxTextSize.y > clientArea.height) {
+//				verticalBar.setVisible(true);
+//				verticalBar.setMaximum(maxTextSize.y);
+//			} else {
+//				verticalBar.setVisible(false);
+//			}
+//		}
+//		if (horizontalBar != null) {
+//			if (maxTextSize.x > clientArea.width) {
+//				horizontalBar.setMaximum(maxTextSize.x);
+//				horizontalBar.setIncrement(10);
+//				horizontalBar.setVisible(true);
+//			} else {
+//				horizontalBar.setVisible(false);
+//			}
+//		}
 
 	}
 
-	private void handleSelection() {
-		// TODO what to do with selection?
+	public int getLineHeight() {
+		checkWidget();
+		GC gc = new GC(this);
+		int height = getLineHeight(gc);
+		gc.dispose();
+		return height;
+	}
 
+//	private int getLineHeight(GC gc) {
+//		checkWidget();
+//		String str = this.lines.get(0);
+//		return gc.textExtent(str).y;
+//	}
+
+	private Point computeTextSize() {
+		GC gc = new GC(this);
+		gc.setFont(getFont());
+		int width = 0, height = 0;
+		if ((style & SWT.SINGLE) != 0) {
+			String str = this.lines.get(0);
+			Point size = gc.textExtent(str);
+			if (str.length() > 0) {
+				width = (int) Math.ceil(size.x);
+			}
+			height = (int) Math.ceil(size.y);
+		} else {
+			Point size = null;
+			for (String line : this.lines) {
+				size = gc.textExtent(line);
+				width = Math.max(width, size.x);
+			}
+			height = size.y * this.lines.size();
+			if (horizontalBar != null) {
+				height += horizontalBar.getSize().y;
+			}
+			if (verticalBar != null) {
+				width += verticalBar.getSize().x;
+			}
+		}
+		gc.dispose();
+
+		return new Point(width, height);
+
+	}
+
+	private void scrollBarSelectionChanged(SelectionEvent e) {
+		redraw();
+	}
+
+	private void handleSelection() {
 		sendSelectionEvent(SWT.Selection);
 	}
 
 	private void onMouseUp(Event e) {
-		if ((e.stateMask & SWT.BUTTON1) != 0)
-			handleSelection();
-		else
-			redraw();
+		// Handle left mouse button clicks
+		if ((e.stateMask & SWT.BUTTON1) != 0) {
+			if ((e.stateMask & SWT.CTRL) != 0) {
+				// Handle Ctrl + Click for multi-selection
+				handleCtrlClick(e.x, e.y);
+			} else {
+				toggleSelectedLine(e);
+			}
+		}
+		redraw();
+	}
+
+	private void handleCtrlClick(int x, int y) {
+		// Determine the clicked line based on mouse coordinates
+		int clickedLine = getTextLocation(x, y);
+
+		if (clickedLine >= 0 && clickedLine < this.lines.size()) {
+			System.out.println("Selected lines: " + this.selectedLines.toString());
+			System.out.println("Clicked Line: " + clickedLine);
+			if (this.selectedLines.contains(clickedLine)) {
+				this.selectedLines.remove(Integer.valueOf(clickedLine));
+			} else {
+				System.out.println();
+				this.selectedLines.add(clickedLine);
+				this.lastSelectedItem = clickedLine;
+			}
+			System.out.println("New Selected lines: " + this.selectedLines.toString());
+		}
 	}
 
 	private void onSelection(Event event) {
@@ -208,9 +354,69 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	private void onKeyReleased(KeyEvent event) {
+		// Handle Shift + Arrow
+		if ((event.stateMask & SWT.SHIFT) != 0) {
+			handleArrowKeys(event.keyCode, true);
+		}
+		// Handle Arrow movement without modifiers
+		else if (event.stateMask == 0) {
+			handleArrowKeys(event.keyCode, false);
+		}
+	}
 
-		// TODO handle arrow keys for the item selection
+	private void handleArrowKeys(int keyCode, boolean isShiftPressed) {
+		switch (keyCode) {
+		case SWT.ARROW_DOWN:
+			if (isShiftPressed) {
+				selectMultipleLine(1);
+			} else {
+				moveSelectedLine(1);
+			}
+			redraw();
+			break;
+		case SWT.ARROW_UP:
+			if (isShiftPressed) {
+				selectMultipleLine(-1);
+			} else {
+				moveSelectedLine(-1);
+			}
+			redraw();
+			break;
+		default:
+			break;
+		}
+	}
 
+	private void selectMultipleLine(int offset) {
+		int newIndex = calculateNewIndex(this.lastSelectedItem, offset);
+		System.out.println("Select Multiple:");
+		System.out.println("New Index:" + newIndex);
+		if (this.selectedLines.contains(newIndex)) {
+			this.selectedLines.remove(Integer.valueOf(newIndex - offset));
+			this.lastSelectedItem = newIndex;
+		} else {
+			this.selectedLines.add(newIndex);
+			this.lastSelectedItem = newIndex;
+			System.out.println("Selected Lines: " + this.selectedLines.toString());
+		}
+	}
+
+	private void moveSelectedLine(int offset) {
+		if (this.selectedLines.size() == 1) {
+			int currentIndex = this.selectedLines.get(0);
+			int newIndex = calculateNewIndex(currentIndex, offset);
+			this.selectedLines.set(0, newIndex);
+		}
+	}
+
+	private int calculateNewIndex(int currentIndex, int offset) {
+		int newIndex = currentIndex + offset;
+		if (newIndex < 0) {
+			newIndex = 0;
+		} else if (newIndex > this.lines.size() - 1) {
+			newIndex = this.lines.size() - 1;
+		}
+		return newIndex;
 	}
 
 	private void onResize() {
@@ -235,16 +441,14 @@ public class List extends Scrollable implements ICustomWidget {
 	private Rectangle getVisibleArea() {
 		Rectangle clientArea = getClientArea();
 
-		ScrollBar horizontalBar = getHorizontalBar();
-		ScrollBar verticalBar = getVerticalBar();
-
-		int hOffset = (horizontalBar != null)
-				? horizontalBar.getSelection()
-				: 0;
-		int vOffset = (verticalBar != null) ? verticalBar.getSelection() : 0;
-
-		clientArea.x += hOffset;
-		clientArea.y += vOffset;
+//		ScrollBar horizontalBar = getHorizontalBar();
+//		ScrollBar verticalBar = getVerticalBar();
+//
+//		int hOffset = (horizontalBar != null) ? horizontalBar.getSelection() : 0;
+//		int vOffset = (verticalBar != null) ? verticalBar.getSelection() : 0;
+//
+//		clientArea.x += hOffset;
+//		clientArea.y += vOffset;
 
 		return clientArea;
 	}
@@ -257,8 +461,24 @@ public class List extends Scrollable implements ICustomWidget {
 		}
 	}
 
-	private void drawTextLine(String text, int lineNumber, int x, int y,
-			Rectangle visibleArea, GC gc) {
+	private int getTextLocation(int selectedX, int selectedY) {
+		Rectangle visibleArea = getVisibleArea();
+		int y = Math.max(selectedY + visibleArea.y, 0);
+
+		GC gc = new GC(this);
+		String[] textLines = this.lines.toArray(new String[0]);
+		int clickedLine = Math.min(Math.round(y / getLineHeight(gc)), textLines.length - 1);
+		int selectedLine = Math.min(clickedLine, textLines.length - 1);
+		return selectedLine;
+	}
+
+	private int getLineHeight(GC gc) {
+		checkWidget();
+		String str = this.lines.get(0);
+		return gc.textExtent(str).y;
+	}
+
+	private void drawTextLine(String text, int lineNumber, int x, int y, Rectangle visibleArea, GC gc) {
 		Point completeTextExtent = gc.textExtent(text);
 		Rectangle clientArea = getClientArea();
 		int _x;
@@ -275,21 +495,98 @@ public class List extends Scrollable implements ICustomWidget {
 			_x += getBorderWidth();
 			_y += getBorderWidth();
 		}
-		gc.drawText(text, _x, _y, true);
+		// handle Vertical Scroll
+		int sizeWithTopIndex = this.topIndex * completeTextExtent.y;
+//		System.out.println("Y position " + _y + " sizeWithTop: " + sizeWithTopIndex);
+		_y -= sizeWithTopIndex;
+		// handle Horizontal Scroll
+		int hSelection = getHorizontalBar().getSelection();
+		_x -= hSelection;
+//		adjustCanvasSize(gc);
+		if (this.selectedLines.size() != 0 && this.selectedLines.contains(lineNumber)) {
+			Color background = gc.getBackground();
+			Color foreground = gc.getForeground();
+			gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION_TEXT));
+			gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION));
+			gc.drawText(text, _x, _y);
+			gc.setForeground(foreground);
+			gc.setBackground(background);
+		} else {
+			gc.drawText(text, _x, _y);
+		}
+	}
+
+//	@Override
+//	ScrollBar createScrollBar(int type) {
+//		ScrollBar bar = new ScrollBar(this, type);
+//		if ((state & CANVAS) != 0) {
+//			bar.setMaximum(100);
+//			bar.setThumb(2);
+//		}
+//		return bar;
+//	}
+
+//	@Override
+//	void createWidget() {
+//		super.createWidget();
+//		if ((style & SWT.H_SCROLL) != 0)
+//			horizontalBar = createScrollBar(SWT.H_SCROLL);
+//		if ((style & SWT.V_SCROLL) != 0)
+//			verticalBar = createScrollBar(SWT.V_SCROLL);
+//	}
+
+	private void adjustCanvasSize(GC gc) {
+		Point maxTextExtent = new Point(0, 0);
+
+		for (String line : lines) {
+			Point extent = gc.textExtent(line);
+			maxTextExtent.x = Math.max(maxTextExtent.x, extent.x);
+			maxTextExtent.y += extent.y;
+		}
+
+		ScrollBar verticalBar = getVerticalBar();
+		ScrollBar horizontalBar = getHorizontalBar();
+
+		if (verticalBar != null) {
+			verticalBar.setMaximum(maxTextExtent.y);
+		}
+		if (horizontalBar != null) {
+			horizontalBar.setMaximum(maxTextExtent.x);
+		}
+
+		// Adjust canvas size to fit content
+		this.setSize(maxTextExtent.x + 20, maxTextExtent.y + 20); // Add padding
+	}
+
+	@Override
+	public void setBounds(Rectangle rect) {
+		super.setBounds(rect);
+	}
+
+	@Override
+	public void setBounds(int x, int y, int width, int height) {
+		super.setBounds(x, y, width, height);
 	}
 
 	private void doPaint(Event e) {
-
 		Rectangle r = getBounds();
 		if (r.width == 0 && r.height == 0) {
 			return;
 		}
-
 		Rectangle visibleArea = getVisibleArea();
-
 		drawText(e, visibleArea);
-
 	}
+
+//	private void drawBackground(Event e) {
+//		GC gc = e.gc;
+//		gc.fillRectangle(e.x, e.y, e.width - 1, e.height - 1);
+//		if ((style & SWT.BORDER) != 0 && isEnabled()) {
+//			Color foreground = gc.getForeground();
+//			gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+//			gc.drawLine(e.x, e.y + e.height - 1, e.x + e.x + e.width - 1, e.y + e.height - 1);
+//			gc.setForeground(foreground);
+//		}
+//	}
 
 	private void onDispose(Event event) {
 		this.dispose();
@@ -299,27 +596,36 @@ public class List extends Scrollable implements ICustomWidget {
 		redraw();
 	}
 
+	private void toggleSelectedLine(Event e) {
+		Integer selectedLine = Integer.valueOf(getTextLocation(e.x, e.y));
+		this.selectedLines.clear();
+		System.out.println("ToggleSelectedLine");
+		this.selectedLines.add(selectedLine);
+		this.lastSelectedItem = selectedLine;
+	}
+
 	/**
 	 * Adds the argument to the end of the receiver's list.
 	 * <p>
-	 * Note: If control characters like '\n', '\t' etc. are used in the string,
-	 * then the behavior is platform dependent.
+	 * Note: If control characters like '\n', '\t' etc. are used in the string, then
+	 * the behavior is platform dependent.
 	 * </p>
 	 *
-	 * @param string
-	 *            the new item
+	 * @param string the new item
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the string is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the string
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see #add(String,int)
 	 */
@@ -329,40 +635,41 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 
 		this.lines.add(string);
-
+		updateScrollBarWithTextSize();
 		redraw();
 
 	}
+
 	/**
-	 * Adds the argument to the receiver's list at the given zero-relative
-	 * index.
+	 * Adds the argument to the receiver's list at the given zero-relative index.
 	 * <p>
 	 * Note: To add an item at the end of the list, use the result of calling
 	 * <code>getItemCount()</code> as the index or use <code>add(String)</code>.
 	 * </p>
 	 * <p>
-	 * Also note, if control characters like '\n', '\t' etc. are used in the
-	 * string, then the behavior is platform dependent.
+	 * Also note, if control characters like '\n', '\t' etc. are used in the string,
+	 * then the behavior is platform dependent.
 	 * </p>
 	 *
-	 * @param string
-	 *            the new item
-	 * @param index
-	 *            the index for the item
+	 * @param string the new item
+	 * @param index  the index for the item
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the string is null</li>
-	 *                <li>ERROR_INVALID_RANGE - if the index is not between 0
-	 *                and the number of elements in the list (inclusive)</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the string
+	 *                                     is null</li>
+	 *                                     <li>ERROR_INVALID_RANGE - if the index is
+	 *                                     not between 0 and the number of elements
+	 *                                     in the list (inclusive)</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see #add(String)
 	 */
@@ -372,48 +679,36 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 		if (index == -1)
 			error(SWT.ERROR_INVALID_RANGE);
-		TCHAR buffer = new TCHAR(getCodePage(), string, true);
-		int result = (int) OS.SendMessage(handle, OS.LB_INSERTSTRING, index,
-				buffer);
-		if (result == OS.LB_ERRSPACE)
-			error(SWT.ERROR_ITEM_NOT_ADDED);
-		if (result == OS.LB_ERR) {
-			int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-			if (0 <= index && index <= count) {
-				error(SWT.ERROR_ITEM_NOT_ADDED);
-			} else {
-				error(SWT.ERROR_INVALID_RANGE);
-			}
-		}
-		if ((style & SWT.H_SCROLL) != 0)
-			setScrollWidth(buffer.chars, true);
+		this.lines.add(index, string);
+		redraw();
 	}
 
 	/**
-	 * Adds the listener to the collection of listeners who will be notified
-	 * when the user changes the receiver's selection, by sending it one of the
-	 * messages defined in the <code>SelectionListener</code> interface.
+	 * Adds the listener to the collection of listeners who will be notified when
+	 * the user changes the receiver's selection, by sending it one of the messages
+	 * defined in the <code>SelectionListener</code> interface.
 	 * <p>
 	 * <code>widgetSelected</code> is called when the selection changes.
 	 * <code>widgetDefaultSelected</code> is typically called when an item is
 	 * double-clicked.
 	 * </p>
 	 *
-	 * @param listener
-	 *            the listener which should be notified when the user changes
-	 *            the receiver's selection
+	 * @param listener the listener which should be notified when the user changes
+	 *                 the receiver's selection
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the listener is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the listener
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see SelectionListener
 	 * @see #removeSelectionListener
@@ -423,131 +718,36 @@ public class List extends Scrollable implements ICustomWidget {
 		addTypedListener(listener, SWT.Selection, SWT.DefaultSelection);
 	}
 
-	@Override
-	long callWindowProc(long hwnd, int msg, long wParam, long lParam) {
-		if (handle == 0)
-			return 0;
-		boolean redraw = false;
-		switch (msg) {
-			case OS.WM_HSCROLL :
-			case OS.WM_VSCROLL : {
-				redraw = findImageControl() != null && getDrawing()
-						&& OS.IsWindowVisible(handle);
-				if (redraw)
-					OS.DefWindowProc(handle, OS.WM_SETREDRAW, 0, 0);
-				break;
-			}
-		}
-		long code = OS.CallWindowProc(ListProc, hwnd, msg, wParam, lParam);
-		switch (msg) {
-			case OS.WM_HSCROLL :
-			case OS.WM_VSCROLL : {
-				if (redraw) {
-					OS.DefWindowProc(handle, OS.WM_SETREDRAW, 1, 0);
-					OS.InvalidateRect(handle, null, true);
-				}
-				break;
-			}
-		}
-		return code;
-	}
-
 	static int checkStyle(int style) {
 		return checkBits(style, SWT.SINGLE, SWT.MULTI, 0, 0, 0, 0);
 	}
 
-	@Override
-	Point computeSizeInPixels(int wHint, int hHint, boolean changed) {
-		checkWidget();
-		int width = 0, height = 0;
-		if (wHint == SWT.DEFAULT) {
-			if ((style & SWT.H_SCROLL) != 0) {
-				width = (int) OS.SendMessage(handle, OS.LB_GETHORIZONTALEXTENT,
-						0, 0);
-				width -= INSET;
-			} else {
-				int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-				long newFont, oldFont = 0;
-				long hDC = OS.GetDC(handle);
-				newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-				if (newFont != 0)
-					oldFont = OS.SelectObject(hDC, newFont);
-				RECT rect = new RECT();
-				int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
-				char[] buffer = new char[64 + 1];
-				for (int i = 0; i < count; i++) {
-					int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN,
-							i, 0);
-					if (length != OS.LB_ERR) {
-						if (length + 1 > buffer.length) {
-							buffer = new char[length + 1];
-						}
-						int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT,
-								i, buffer);
-						if (result != OS.LB_ERR) {
-							OS.DrawText(hDC, buffer, length, rect, flags);
-							width = Math.max(width, rect.right - rect.left);
-						}
-					}
-				}
-				if (newFont != 0)
-					OS.SelectObject(hDC, oldFont);
-				OS.ReleaseDC(handle, hDC);
-			}
-		}
-		if (hHint == SWT.DEFAULT) {
-			int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-			int itemHeight = (int) OS.SendMessage(handle, OS.LB_GETITEMHEIGHT,
-					0, 0);
-			height = count * itemHeight;
-		}
-		if (width == 0)
-			width = DEFAULT_WIDTH;
-		if (height == 0)
-			height = DEFAULT_HEIGHT;
-		if (wHint != SWT.DEFAULT)
-			width = wHint;
-		if (hHint != SWT.DEFAULT)
-			height = hHint;
-		int border = getBorderWidthInPixels();
-		width += border * 2 + INSET;
-		height += border * 2;
-		if ((style & SWT.V_SCROLL) != 0) {
-			width += getSystemMetrics(OS.SM_CXVSCROLL);
-		}
-		if ((style & SWT.H_SCROLL) != 0) {
-			height += getSystemMetrics(OS.SM_CYHSCROLL);
-		}
-		return new Point(width, height);
-	}
-
-	@Override
-	int defaultBackground() {
-		return OS.GetSysColor(OS.COLOR_WINDOW);
-	}
+//	@Override
+//	int defaultBackground() {
+//		return OS.GetSysColor(OS.COLOR_WINDOW);
+//	}
 
 	/**
-	 * Deselects the items at the given zero-relative indices in the receiver.
-	 * If the item at the given zero-relative index in the receiver is selected,
-	 * it is deselected. If the item at the index was not selected, it remains
-	 * deselected. Indices that are out of range and duplicate indices are
-	 * ignored.
+	 * Deselects the items at the given zero-relative indices in the receiver. If
+	 * the item at the given zero-relative index in the receiver is selected, it is
+	 * deselected. If the item at the index was not selected, it remains deselected.
+	 * Indices that are out of range and duplicate indices are ignored.
 	 *
-	 * @param indices
-	 *            the array of indices for the items to deselect
+	 * @param indices the array of indices for the items to deselect
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the set of indices is
-	 *                null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the set of
+	 *                                     indices is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void deselect(int[] indices) {
 		checkWidget();
@@ -575,55 +775,44 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Deselects the item at the given zero-relative index in the receiver. If
-	 * the item at the index was already deselected, it remains deselected.
-	 * Indices that are out of range are ignored.
+	 * Deselects the item at the given zero-relative index in the receiver. If the
+	 * item at the index was already deselected, it remains deselected. Indices that
+	 * are out of range are ignored.
 	 *
-	 * @param index
-	 *            the index of the item to deselect
+	 * @param index the index of the item to deselect
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void deselect(int index) {
 		checkWidget();
 		if (index == -1)
 			return;
-		if ((style & SWT.SINGLE) != 0) {
-			int oldIndex = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-			if (oldIndex == OS.LB_ERR)
-				return;
-			if (oldIndex == index)
-				OS.SendMessage(handle, OS.LB_SETCURSEL, -1, 0);
-			return;
-		}
-		OS.SendMessage(handle, OS.LB_SETSEL, 0, index);
+		this.selectedLines.remove(index);
 	}
 
 	/**
-	 * Deselects the items at the given zero-relative indices in the receiver.
-	 * If the item at the given zero-relative index in the receiver is selected,
-	 * it is deselected. If the item at the index was not selected, it remains
-	 * deselected. The range of the indices is inclusive. Indices that are out
-	 * of range are ignored.
+	 * Deselects the items at the given zero-relative indices in the receiver. If
+	 * the item at the given zero-relative index in the receiver is selected, it is
+	 * deselected. If the item at the index was not selected, it remains deselected.
+	 * The range of the indices is inclusive. Indices that are out of range are
+	 * ignored.
 	 *
-	 * @param start
-	 *            the start index of the items to deselect
-	 * @param end
-	 *            the end index of the items to deselect
+	 * @param start the start index of the items to deselect
+	 * @param end   the end index of the items to deselect
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void deselect(int start, int end) {
 		checkWidget();
@@ -639,9 +828,8 @@ public class List extends Scrollable implements ICustomWidget {
 			return;
 		}
 		/*
-		 * Ensure that at least one item is contained in the range from start to
-		 * end. Note that when start = end, LB_SELITEMRANGEEX deselects the
-		 * item.
+		 * Ensure that at least one item is contained in the range from start to end.
+		 * Note that when start = end, LB_SELITEMRANGEEX deselects the item.
 		 */
 		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
 		if (start < 0 && end < 0)
@@ -657,35 +845,31 @@ public class List extends Scrollable implements ICustomWidget {
 	 * Deselects all selected items in the receiver.
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void deselectAll() {
 		checkWidget();
-		if ((style & SWT.SINGLE) != 0) {
-			OS.SendMessage(handle, OS.LB_SETCURSEL, -1, 0);
-		} else {
-			OS.SendMessage(handle, OS.LB_SETSEL, 0, -1);
-		}
+		this.selectedLines.clear();
 	}
 
 	/**
-	 * Returns the zero-relative index of the item which currently has the focus
-	 * in the receiver, or -1 if no item has focus.
+	 * Returns the zero-relative index of the item which currently has the focus in
+	 * the receiver, or -1 if no item has focus.
 	 *
 	 * @return the index of the selected item
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int getFocusIndex() {
 		checkWidget();
@@ -699,44 +883,30 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Returns the item at the given, zero-relative index in the receiver.
-	 * Throws an exception if the index is out of range.
+	 * Returns the item at the given, zero-relative index in the receiver. Throws an
+	 * exception if the index is out of range.
 	 *
-	 * @param index
-	 *            the index of the item to return
+	 * @param index the index of the item to return
 	 * @return the item at the given index
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_INVALID_RANGE - if the index is not between 0
-	 *                and the number of elements in the list minus 1
-	 *                (inclusive)</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_INVALID_RANGE - if the index is
+	 *                                     not between 0 and the number of elements
+	 *                                     in the list minus 1 (inclusive)</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public String getItem(int index) {
 		checkWidget();
-		int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, index, 0);
-		if (length != OS.LB_ERR) {
-			char[] buffer = new char[length + 1];
-			int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, index,
-					buffer);
-			if (result != OS.LB_ERR)
-				return ((state & HAS_AUTO_DIRECTION) != 0)
-						? new String(buffer, 1, length - 1)
-						: new String(buffer, 0, length);
-		}
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (0 <= index && index < count)
-			error(SWT.ERROR_CANNOT_GET_ITEM);
-		error(SWT.ERROR_INVALID_RANGE);
-		return "";
+		return this.lines.get(index);
 	}
 
 	/**
@@ -745,34 +915,31 @@ public class List extends Scrollable implements ICustomWidget {
 	 * @return the number of items
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int getItemCount() {
 		checkWidget();
-		int result = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (result == OS.LB_ERR)
-			error(SWT.ERROR_CANNOT_GET_COUNT);
-		return result;
+		return this.lines.size();
 	}
 
 	/**
-	 * Returns the height of the area which would be used to display
-	 * <em>one</em> of the items in the list.
+	 * Returns the height of the area which would be used to display <em>one</em> of
+	 * the items in the list.
 	 *
 	 * @return the height of one item
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int getItemHeight() {
 		checkWidget();
@@ -787,22 +954,22 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Returns a (possibly empty) array of <code>String</code>s which are the
-	 * items in the receiver.
+	 * Returns a (possibly empty) array of <code>String</code>s which are the items
+	 * in the receiver.
 	 * <p>
-	 * Note: This is not the actual structure used by the receiver to maintain
-	 * its list of items, so modifying the array will not affect the receiver.
+	 * Note: This is not the actual structure used by the receiver to maintain its
+	 * list of items, so modifying the array will not affect the receiver.
 	 * </p>
 	 *
 	 * @return the items in the receiver's list
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public String[] getItems() {
 		checkWidget();
@@ -814,23 +981,23 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Returns an array of <code>String</code>s that are currently selected in
-	 * the receiver. The order of the items is unspecified. An empty array
-	 * indicates that no items are selected.
+	 * Returns an array of <code>String</code>s that are currently selected in the
+	 * receiver. The order of the items is unspecified. An empty array indicates
+	 * that no items are selected.
 	 * <p>
-	 * Note: This is not the actual structure used by the receiver to maintain
-	 * its selection, so modifying the array will not affect the receiver.
+	 * Note: This is not the actual structure used by the receiver to maintain its
+	 * selection, so modifying the array will not affect the receiver.
 	 * </p>
 	 *
 	 * @return an array representing the selection
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public String[] getSelection() {
 		checkWidget();
@@ -848,12 +1015,12 @@ public class List extends Scrollable implements ICustomWidget {
 	 * @return the number of selected items
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int getSelectionCount() {
 		checkWidget();
@@ -870,18 +1037,18 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Returns the zero-relative index of the item which is currently selected
-	 * in the receiver, or -1 if no item is selected.
+	 * Returns the zero-relative index of the item which is currently selected in
+	 * the receiver, or -1 if no item is selected.
 	 *
 	 * @return the index of the selected item or -1
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int getSelectionIndex() {
 		checkWidget();
@@ -907,23 +1074,23 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Returns the zero-relative indices of the items which are currently
-	 * selected in the receiver. The order of the indices is unspecified. The
-	 * array is empty if no items are selected.
+	 * Returns the zero-relative indices of the items which are currently selected
+	 * in the receiver. The order of the indices is unspecified. The array is empty
+	 * if no items are selected.
 	 * <p>
-	 * Note: This is not the actual structure used by the receiver to maintain
-	 * its selection, so modifying the array will not affect the receiver.
+	 * Note: This is not the actual structure used by the receiver to maintain its
+	 * selection, so modifying the array will not affect the receiver.
 	 * </p>
 	 *
 	 * @return the array of indices of the selected items
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int[] getSelectionIndices() {
 		checkWidget();
@@ -931,173 +1098,143 @@ public class List extends Scrollable implements ICustomWidget {
 			int result = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
 			if (result == OS.LB_ERR)
 				return new int[0];
-			return new int[]{result};
+			return new int[] { result };
 		}
 		int length = (int) OS.SendMessage(handle, OS.LB_GETSELCOUNT, 0, 0);
 		if (length == OS.LB_ERR)
 			error(SWT.ERROR_CANNOT_GET_SELECTION);
 		int[] indices = new int[length];
-		int result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, length,
-				indices);
+		int result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, length, indices);
 		if (result != length)
 			error(SWT.ERROR_CANNOT_GET_SELECTION);
 		return indices;
 	}
 
 	/**
-	 * Returns the zero-relative index of the item which is currently at the top
-	 * of the receiver. This index can change when items are scrolled or new
-	 * items are added or removed.
+	 * Returns the zero-relative index of the item which is currently at the top of
+	 * the receiver. This index can change when items are scrolled or new items are
+	 * added or removed.
 	 *
 	 * @return the index of the top item
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public int getTopIndex() {
 		checkWidget();
-		return (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
+		return (int) this.topIndex;
 	}
 
 	/**
 	 * Gets the index of an item.
 	 * <p>
-	 * The list is searched starting at 0 until an item is found that is equal
-	 * to the search item. If no item is found, -1 is returned. Indexing is zero
-	 * based.
+	 * The list is searched starting at 0 until an item is found that is equal to
+	 * the search item. If no item is found, -1 is returned. Indexing is zero based.
 	 *
-	 * @param string
-	 *            the search item
+	 * @param string the search item
 	 * @return the index of the item
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the string is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the string
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public int indexOf(String string) {
 		return indexOf(string, 0);
 	}
 
 	/**
-	 * Searches the receiver's list starting at the given, zero-relative index
-	 * until an item is found that is equal to the argument, and returns the
-	 * index of that item. If no item is found or the starting index is out of
-	 * range, returns -1.
+	 * Searches the receiver's list starting at the given, zero-relative index until
+	 * an item is found that is equal to the argument, and returns the index of that
+	 * item. If no item is found or the starting index is out of range, returns -1.
 	 *
-	 * @param string
-	 *            the search item
-	 * @param start
-	 *            the zero-relative index at which to start the search
+	 * @param string the search item
+	 * @param start  the zero-relative index at which to start the search
 	 * @return the index of the item
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the string is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the string
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public int indexOf(String string, int start) {
 		checkWidget();
 		if (string == null)
 			error(SWT.ERROR_NULL_ARGUMENT);
 
-		/*
-		 * Bug in Windows. For some reason, LB_FINDSTRINGEXACT will not find
-		 * empty strings even though it is legal to insert an empty string into
-		 * a list. The fix is to search the list, an item at a time.
-		 */
-		if (string.length() == 0) {
-			int count = getItemCount();
-			for (int i = start; i < count; i++) {
-				if (string.equals(getItem(i)))
-					return i;
-			}
-			return -1;
-		}
+		return this.lines.indexOf(string);
 
-		/* Use LB_FINDSTRINGEXACT to search for the item */
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (!(0 <= start && start < count))
-			return -1;
-		int index = start - 1, last;
-		TCHAR buffer = new TCHAR(getCodePage(), string, true);
-		do {
-			index = (int) OS.SendMessage(handle, OS.LB_FINDSTRINGEXACT,
-					last = index, buffer);
-			if (index == OS.LB_ERR || index <= last)
-				return -1;
-		} while (!string.equals(getItem(index)));
-		return index;
 	}
 
 	/**
 	 * Returns <code>true</code> if the item is selected, and <code>false</code>
 	 * otherwise. Indices out of range are ignored.
 	 *
-	 * @param index
-	 *            the index of the item
+	 * @param index the index of the item
 	 * @return the selection state of the item at the index
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public boolean isSelected(int index) {
 		checkWidget();
-		int result = (int) OS.SendMessage(handle, OS.LB_GETSEL, index, 0);
-		return (result != 0) && (result != OS.LB_ERR);
+		return selectedLines.contains(index);
 	}
 
 	@Override
 	boolean isUseWsBorder() {
-		return super.isUseWsBorder()
-				|| ((display != null) && display.useWsBorderList);
+		return super.isUseWsBorder() || ((display != null) && display.useWsBorderList);
 	}
 
 	/**
 	 * Removes the items from the receiver at the given zero-relative indices.
 	 *
-	 * @param indices
-	 *            the array of indices of the items
+	 * @param indices the array of indices of the items
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_INVALID_RANGE - if the index is not between 0
-	 *                and the number of elements in the list minus 1
-	 *                (inclusive)</li>
-	 *                <li>ERROR_NULL_ARGUMENT - if the indices array is
-	 *                null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_INVALID_RANGE - if the index is
+	 *                                     not between 0 and the number of elements
+	 *                                     in the list minus 1 (inclusive)</li>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the indices
+	 *                                     array is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void remove(int[] indices) {
 		checkWidget();
@@ -1105,284 +1242,138 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 		if (indices.length == 0)
 			return;
-		int[] newIndices = new int[indices.length];
-		System.arraycopy(indices, 0, newIndices, 0, indices.length);
-		sort(newIndices);
-		int start = newIndices[newIndices.length - 1], end = newIndices[0];
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (!(0 <= start && start <= end && end < count)) {
-			error(SWT.ERROR_INVALID_RANGE);
-		}
-		int topIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
-		RECT rect = null;
-		long hDC = 0, oldFont = 0, newFont = 0;
-		int newWidth = 0;
-		if ((style & SWT.H_SCROLL) != 0) {
-			rect = new RECT();
-			hDC = OS.GetDC(handle);
-			newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-			if (newFont != 0)
-				oldFont = OS.SelectObject(hDC, newFont);
-		}
-		int i = 0, topCount = 0, last = -1;
-		while (i < newIndices.length) {
-			int index = newIndices[i];
-			if (index != last) {
-				char[] buffer = null;
-				int length = 0;
-				if ((style & SWT.H_SCROLL) != 0) {
-					length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN,
-							index, 0);
-					if (length == OS.LB_ERR)
-						break;
-					buffer = new char[length + 1];
-					int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT,
-							index, buffer);
-					if (result == OS.LB_ERR)
-						break;
-				}
-				int result = (int) OS.SendMessage(handle, OS.LB_DELETESTRING,
-						index, 0);
-				if (result == OS.LB_ERR)
-					break;
-				if ((style & SWT.H_SCROLL) != 0) {
-					int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE
-							| OS.DT_NOPREFIX;
-					OS.DrawText(hDC, buffer, length, rect, flags);
-					newWidth = Math.max(newWidth, rect.right - rect.left);
-				}
-				if (index < topIndex)
-					topCount++;
-				last = index;
-			}
-			i++;
-		}
-		if ((style & SWT.H_SCROLL) != 0) {
-			if (newFont != 0)
-				OS.SelectObject(hDC, oldFont);
-			OS.ReleaseDC(handle, hDC);
-			setScrollWidth(newWidth, false);
-		}
-		if (topCount > 0) {
-			topIndex -= topCount;
-		}
-		OS.SendMessage(handle, OS.LB_SETTOPINDEX, topIndex, 0);
-		if (i < newIndices.length)
-			error(SWT.ERROR_ITEM_NOT_REMOVED);
+		this.lines.removeAll(Arrays.asList(indices));
+		redraw();
 	}
 
 	/**
 	 * Removes the item from the receiver at the given zero-relative index.
 	 *
-	 * @param index
-	 *            the index for the item
+	 * @param index the index for the item
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_INVALID_RANGE - if the index is not between 0
-	 *                and the number of elements in the list minus 1
-	 *                (inclusive)</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_INVALID_RANGE - if the index is
+	 *                                     not between 0 and the number of elements
+	 *                                     in the list minus 1 (inclusive)</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void remove(int index) {
 		checkWidget();
-		char[] buffer = null;
-		if ((style & SWT.H_SCROLL) != 0) {
-			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, index,
-					0);
-			if (length == OS.LB_ERR) {
-				int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-				if (0 <= index && index < count)
-					error(SWT.ERROR_ITEM_NOT_REMOVED);
-				error(SWT.ERROR_INVALID_RANGE);
-			}
-			buffer = new char[length + 1];
-			int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, index,
-					buffer);
-			if (result == OS.LB_ERR) {
-				int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-				if (0 <= index && index < count)
-					error(SWT.ERROR_ITEM_NOT_REMOVED);
-				error(SWT.ERROR_INVALID_RANGE);
-			}
-		}
-		int topIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
-		int result = (int) OS.SendMessage(handle, OS.LB_DELETESTRING, index, 0);
-		if (result == OS.LB_ERR) {
-			int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-			if (0 <= index && index < count)
-				error(SWT.ERROR_ITEM_NOT_REMOVED);
-			error(SWT.ERROR_INVALID_RANGE);
-		}
-		if ((style & SWT.H_SCROLL) != 0)
-			setScrollWidth(buffer, false);
-		if (index < topIndex) {
-			topIndex -= 1;
-		}
-		OS.SendMessage(handle, OS.LB_SETTOPINDEX, topIndex, 0);
+		if (index < 0)
+			error(SWT.ERROR_INVALID_ARGUMENT);
+		this.lines.remove(index);
+		redraw();
 	}
 
 	/**
-	 * Removes the items from the receiver which are between the given
-	 * zero-relative start and end indices (inclusive).
+	 * Removes the items from the receiver which are between the given zero-relative
+	 * start and end indices (inclusive).
 	 *
-	 * @param start
-	 *            the start of the range
-	 * @param end
-	 *            the end of the range
+	 * @param start the start of the range
+	 * @param end   the end of the range
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_INVALID_RANGE - if either the start or end are
-	 *                not between 0 and the number of elements in the list minus
-	 *                1 (inclusive)</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_INVALID_RANGE - if either the
+	 *                                     start or end are not between 0 and the
+	 *                                     number of elements in the list minus 1
+	 *                                     (inclusive)</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void remove(int start, int end) {
 		checkWidget();
 		if (start > end)
 			return;
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (!(0 <= start && start <= end && end < count)) {
-			error(SWT.ERROR_INVALID_RANGE);
+
+		for (int i = start; i < end; i++) {
+			remove(i);
 		}
-		if (start == 0 && end == count - 1) {
-			removeAll();
-			return;
-		}
-		int topIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
-		RECT rect = null;
-		long hDC = 0, oldFont = 0, newFont = 0;
-		int newWidth = 0;
-		if ((style & SWT.H_SCROLL) != 0) {
-			rect = new RECT();
-			hDC = OS.GetDC(handle);
-			newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-			if (newFont != 0)
-				oldFont = OS.SelectObject(hDC, newFont);
-		}
-		int index = start;
-		int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
-		while (index <= end) {
-			char[] buffer = null;
-			int length = 0;
-			if ((style & SWT.H_SCROLL) != 0) {
-				length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, start,
-						0);
-				if (length == OS.LB_ERR)
-					break;
-				buffer = new char[length + 1];
-				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, start,
-						buffer);
-				if (result == OS.LB_ERR)
-					break;
-			}
-			int result = (int) OS.SendMessage(handle, OS.LB_DELETESTRING, start,
-					0);
-			if (result == OS.LB_ERR)
-				break;
-			if ((style & SWT.H_SCROLL) != 0) {
-				OS.DrawText(hDC, buffer, length, rect, flags);
-				newWidth = Math.max(newWidth, rect.right - rect.left);
-			}
-			index++;
-		}
-		if ((style & SWT.H_SCROLL) != 0) {
-			if (newFont != 0)
-				OS.SelectObject(hDC, oldFont);
-			OS.ReleaseDC(handle, hDC);
-			setScrollWidth(newWidth, false);
-		}
-		if (end < topIndex) {
-			topIndex -= end - start + 1;
-		}
-		OS.SendMessage(handle, OS.LB_SETTOPINDEX, topIndex, 0);
-		if (index <= end)
-			error(SWT.ERROR_ITEM_NOT_REMOVED);
+		redraw();
 	}
 
 	/**
 	 * Searches the receiver's list starting at the first item until an item is
 	 * found that is equal to the argument, and removes that item from the list.
 	 *
-	 * @param string
-	 *            the item to remove
+	 * @param string the item to remove
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the string is null</li>
-	 *                <li>ERROR_INVALID_ARGUMENT - if the string is not found in
-	 *                the list</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the string
+	 *                                     is null</li>
+	 *                                     <li>ERROR_INVALID_ARGUMENT - if the
+	 *                                     string is not found in the list</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void remove(String string) {
 		checkWidget();
 		if (string == null)
 			error(SWT.ERROR_NULL_ARGUMENT);
-		int index = indexOf(string, 0);
-		if (index == -1)
-			error(SWT.ERROR_INVALID_ARGUMENT);
-		remove(index);
+		this.lines.remove(string);
+		redraw();
 	}
 
 	/**
 	 * Removes all of the items from the receiver.
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void removeAll() {
 		checkWidget();
-		OS.SendMessage(handle, OS.LB_RESETCONTENT, 0, 0);
-		if ((style & SWT.H_SCROLL) != 0) {
-			OS.SendMessage(handle, OS.LB_SETHORIZONTALEXTENT, 0, 0);
-		}
+		this.lines.clear();
+		redraw();
 	}
 
 	/**
-	 * Removes the listener from the collection of listeners who will be
-	 * notified when the user changes the receiver's selection.
+	 * Removes the listener from the collection of listeners who will be notified
+	 * when the user changes the receiver's selection.
 	 *
-	 * @param listener
-	 *            the listener which should no longer be notified
+	 * @param listener the listener which should no longer be notified
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the listener is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the listener
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see SelectionListener
 	 * @see #addSelectionListener
@@ -1401,27 +1392,26 @@ public class List extends Scrollable implements ICustomWidget {
 	 * Selects the items at the given zero-relative indices in the receiver. The
 	 * current selection is not cleared before the new items are selected.
 	 * <p>
-	 * If the item at a given index is not selected, it is selected. If the item
-	 * at a given index was already selected, it remains selected. Indices that
-	 * are out of range and duplicate indices are ignored. If the receiver is
-	 * single-select and multiple indices are specified, then all indices are
-	 * ignored.
+	 * If the item at a given index is not selected, it is selected. If the item at
+	 * a given index was already selected, it remains selected. Indices that are out
+	 * of range and duplicate indices are ignored. If the receiver is single-select
+	 * and multiple indices are specified, then all indices are ignored.
 	 *
-	 * @param indices
-	 *            the array of indices for the items to select
+	 * @param indices the array of indices for the items to select
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the array of indices is
-	 *                null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the array of
+	 *                                     indices is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see List#setSelection(int[])
 	 */
@@ -1449,20 +1439,19 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Selects the item at the given zero-relative index in the receiver's list.
-	 * If the item at the index was already selected, it remains selected.
-	 * Indices that are out of range are ignored.
+	 * Selects the item at the given zero-relative index in the receiver's list. If
+	 * the item at the index was already selected, it remains selected. Indices that
+	 * are out of range are ignored.
 	 *
-	 * @param index
-	 *            the index of the item to select
+	 * @param index the index of the item to select
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void select(int index) {
 		checkWidget();
@@ -1472,85 +1461,42 @@ public class List extends Scrollable implements ICustomWidget {
 	void select(int index, boolean scroll) {
 		if (index < 0)
 			return;
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
+		int count = this.lines.size();
 		if (index >= count)
 			return;
-		if (scroll) {
-			if ((style & SWT.SINGLE) != 0) {
-				OS.SendMessage(handle, OS.LB_SETCURSEL, index, 0);
-			} else {
-				OS.SendMessage(handle, OS.LB_SETSEL, 1, index);
-			}
-			return;
-		}
-		int topIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
-		RECT itemRect = new RECT(), selectedRect = null;
-		OS.SendMessage(handle, OS.LB_GETITEMRECT, index, itemRect);
-		boolean redraw = getDrawing() && OS.IsWindowVisible(handle);
-		if (redraw) {
-			OS.UpdateWindow(handle);
-			OS.SendMessage(handle, OS.WM_SETREDRAW, 0, 0);
-		}
-		int focusIndex = -1;
-		if ((style & SWT.SINGLE) != 0) {
-			int oldIndex = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-			if (oldIndex != -1) {
-				selectedRect = new RECT();
-				OS.SendMessage(handle, OS.LB_GETITEMRECT, oldIndex,
-						selectedRect);
-			}
-			OS.SendMessage(handle, OS.LB_SETCURSEL, index, 0);
-		} else {
-			focusIndex = (int) OS.SendMessage(handle, OS.LB_GETCARETINDEX, 0,
-					0);
-			OS.SendMessage(handle, OS.LB_SETSEL, 1, index);
-		}
-		if ((style & SWT.MULTI) != 0) {
-			if (focusIndex != -1) {
-				OS.SendMessage(handle, OS.LB_SETCARETINDEX, focusIndex, 0);
-			}
-		}
-		OS.SendMessage(handle, OS.LB_SETTOPINDEX, topIndex, 0);
-		if (redraw) {
-			OS.SendMessage(handle, OS.WM_SETREDRAW, 1, 0);
-			OS.ValidateRect(handle, null);
-			OS.InvalidateRect(handle, itemRect, true);
-			if (selectedRect != null) {
-				OS.InvalidateRect(handle, selectedRect, true);
-			}
-		}
+		System.out.println("Select-LastSelectedItem: " + index);
+		this.selectedLines.add(index);
+		this.lastSelectedItem = index;
+		redraw();
 	}
 
 	/**
-	 * Selects the items in the range specified by the given zero-relative
-	 * indices in the receiver. The range of indices is inclusive. The current
-	 * selection is not cleared before the new items are selected.
+	 * Selects the items in the range specified by the given zero-relative indices
+	 * in the receiver. The range of indices is inclusive. The current selection is
+	 * not cleared before the new items are selected.
 	 * <p>
-	 * If an item in the given range is not selected, it is selected. If an item
-	 * in the given range was already selected, it remains selected. Indices
-	 * that are out of range are ignored and no items will be selected if start
-	 * is greater than end. If the receiver is single-select and there is more
-	 * than one item in the given range, then all indices are ignored.
+	 * If an item in the given range is not selected, it is selected. If an item in
+	 * the given range was already selected, it remains selected. Indices that are
+	 * out of range are ignored and no items will be selected if start is greater
+	 * than end. If the receiver is single-select and there is more than one item in
+	 * the given range, then all indices are ignored.
 	 *
-	 * @param start
-	 *            the start of the range
-	 * @param end
-	 *            the end of the range
+	 * @param start the start of the range
+	 * @param end   the end of the range
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 *
 	 * @see List#setSelection(int,int)
 	 */
 	public void select(int start, int end) {
 		checkWidget();
-		if (end < 0 || start > end
-				|| ((style & SWT.SINGLE) != 0 && start != end))
+		if (end < 0 || start > end || ((style & SWT.SINGLE) != 0 && start != end))
 			return;
 		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
 		if (count == 0 || start >= count)
@@ -1572,7 +1518,10 @@ public class List extends Scrollable implements ICustomWidget {
 			select(start, scroll);
 			return;
 		}
-		OS.SendMessage(handle, OS.LB_SELITEMRANGEEX, start, end);
+		for (int i = start; i <= end; i++) {
+			select(i, scroll);
+		}
+
 		if (scroll)
 			showSelection();
 	}
@@ -1583,26 +1532,27 @@ public class List extends Scrollable implements ICustomWidget {
 	 * If the receiver is single-select, do nothing.
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void selectAll() {
-		checkWidget();
-		if ((style & SWT.SINGLE) != 0)
-			return;
-		OS.SendMessage(handle, OS.LB_SETSEL, 1, -1);
+		this.selectedLines.clear();
+		for (int i = 0; i < this.lines.size(); i++) {
+			this.selectedLines.add(i);
+			this.lastSelectedItem = i;
+		}
 	}
 
 	void setFocusIndex(int index) {
 		// checkWidget ();
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
+		int count = this.lines.size();
 		if (!(0 <= index && index < count))
 			return;
-		OS.SendMessage(handle, OS.LB_SETCARETINDEX, index, 0);
+//		OS.SendMessage(handle, OS.LB_SETCARETINDEX, index, 0);
 	}
 
 	@Override
@@ -1614,61 +1564,57 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	/**
-	 * Sets the text of the item in the receiver's list at the given
-	 * zero-relative index to the string argument.
+	 * Sets the text of the item in the receiver's list at the given zero-relative
+	 * index to the string argument.
 	 *
-	 * @param index
-	 *            the index for the item
-	 * @param string
-	 *            the new text for the item
+	 * @param index  the index for the item
+	 * @param string the new text for the item
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_INVALID_RANGE - if the index is not between 0
-	 *                and the number of elements in the list minus 1
-	 *                (inclusive)</li>
-	 *                <li>ERROR_NULL_ARGUMENT - if the string is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_INVALID_RANGE - if the index is
+	 *                                     not between 0 and the number of elements
+	 *                                     in the list minus 1 (inclusive)</li>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the string
+	 *                                     is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void setItem(int index, String string) {
 		checkWidget();
 		if (string == null)
 			error(SWT.ERROR_NULL_ARGUMENT);
-		int topIndex = getTopIndex();
-		boolean isSelected = isSelected(index);
-		remove(index);
-		add(string, index);
-		if (isSelected)
-			select(index, false);
-		setTopIndex(topIndex);
+		this.lines.set(index, string);
+		redraw();
 	}
 
 	/**
 	 * Sets the receiver's items to be the given array of items.
 	 *
-	 * @param items
-	 *            the array of items
+	 * @param items the array of items
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the items array is null</li>
-	 *                <li>ERROR_INVALID_ARGUMENT - if an item in the items array
-	 *                is null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the items
+	 *                                     array is null</li>
+	 *                                     <li>ERROR_INVALID_ARGUMENT - if an item
+	 *                                     in the items array is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 */
 	public void setItems(String... items) {
 		checkWidget();
@@ -1678,64 +1624,9 @@ public class List extends Scrollable implements ICustomWidget {
 			if (item == null)
 				error(SWT.ERROR_INVALID_ARGUMENT);
 		}
-		long oldProc = OS.GetWindowLongPtr(handle, OS.GWLP_WNDPROC);
-		OS.SetWindowLongPtr(handle, OS.GWLP_WNDPROC, ListProc);
-		boolean redraw = getDrawing() && OS.IsWindowVisible(handle);
-		if (redraw) {
-			OS.SendMessage(handle, OS.WM_SETREDRAW, 0, 0);
-		}
-		RECT rect = null;
-		long hDC = 0, oldFont = 0, newFont = 0;
-		int newWidth = 0;
-		if ((style & SWT.H_SCROLL) != 0) {
-			rect = new RECT();
-			hDC = OS.GetDC(handle);
-			newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-			if (newFont != 0)
-				oldFont = OS.SelectObject(hDC, newFont);
-			OS.SendMessage(handle, OS.LB_SETHORIZONTALEXTENT, 0, 0);
-		}
-		int length = items.length;
-		OS.SendMessage(handle, OS.LB_RESETCONTENT, 0, 0);
-		OS.SendMessage(handle, OS.LB_INITSTORAGE, length, length * 32);
-		int index = 0;
-		int cp = getCodePage();
-		while (index < length) {
-			String string = items[index];
-			TCHAR buffer = new TCHAR(cp, string, true);
-			int result = (int) OS.SendMessage(handle, OS.LB_ADDSTRING, 0,
-					buffer);
-			if (result == OS.LB_ERR || result == OS.LB_ERRSPACE)
-				break;
-			if ((style & SWT.H_SCROLL) != 0) {
-				int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
-				OS.DrawText(hDC, buffer, -1, rect, flags);
-				newWidth = Math.max(newWidth, rect.right - rect.left);
-			}
-			index++;
-		}
-		if ((style & SWT.H_SCROLL) != 0) {
-			if (newFont != 0)
-				OS.SelectObject(hDC, oldFont);
-			OS.ReleaseDC(handle, hDC);
-			OS.SendMessage(handle, OS.LB_SETHORIZONTALEXTENT, newWidth + INSET,
-					0);
-		}
-		if (redraw) {
-			OS.SendMessage(handle, OS.WM_SETREDRAW, 1, 0);
-			/*
-			 * This code is intentionally commented. The window proc for the
-			 * list box implements WM_SETREDRAW to invalidate and erase the
-			 * widget. This is undocumented behavior. The commented code below
-			 * shows what is actually happening and reminds us that we are
-			 * relying on this undocumented behavior.
-			 */
-			// int flags = OS.RDW_ERASE | OS.RDW_FRAME | OS.RDW_INVALIDATE;
-			// OS.RedrawWindow (handle, null, 0, flags);
-		}
-		OS.SetWindowLongPtr(handle, OS.GWLP_WNDPROC, oldProc);
-		if (index < items.length)
-			error(SWT.ERROR_ITEM_NOT_ADDED);
+		this.lines.clear();
+		this.lines.addAll(Arrays.asList(items));
+		redraw();
 	}
 
 	/**
@@ -1755,8 +1646,7 @@ public class List extends Scrollable implements ICustomWidget {
 			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, i, 0);
 			if (length != OS.LB_ERR) {
 				char[] buffer = new char[length + 1];
-				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, i,
-						buffer);
+				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, i, buffer);
 				if (result != OS.LB_ERR) {
 					OS.DrawText(hDC, buffer, length, rect, flags);
 					newWidth = Math.max(newWidth, rect.right - rect.left);
@@ -1786,8 +1676,7 @@ public class List extends Scrollable implements ICustomWidget {
 
 	void setScrollWidth(int newWidth, boolean grow) {
 		newWidth += INSET;
-		int width = (int) OS.SendMessage(handle, OS.LB_GETHORIZONTALEXTENT, 0,
-				0);
+		int width = (int) OS.SendMessage(handle, OS.LB_GETHORIZONTALEXTENT, 0, 0);
 		if (grow) {
 			if (newWidth <= width)
 				return;
@@ -1808,21 +1697,21 @@ public class List extends Scrollable implements ICustomWidget {
 	 * receiver is single-select and multiple indices are specified, then all
 	 * indices are ignored.
 	 *
-	 * @param indices
-	 *            the indices of the items to select
+	 * @param indices the indices of the items to select
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the array of indices is
-	 *                null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the array of
+	 *                                     indices is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see List#deselectAll()
 	 * @see List#select(int[])
@@ -1836,37 +1725,31 @@ public class List extends Scrollable implements ICustomWidget {
 		if (length == 0 || ((style & SWT.SINGLE) != 0 && length > 1))
 			return;
 		select(indices, true);
-		if ((style & SWT.MULTI) != 0) {
-			int focusIndex = indices[0];
-			if (focusIndex >= 0)
-				setFocusIndex(focusIndex);
-		}
 	}
 
 	/**
 	 * Sets the receiver's selection to be the given array of items. The current
-	 * selection is cleared before the new items are selected, and if necessary
-	 * the receiver is scrolled to make the new selection visible.
+	 * selection is cleared before the new items are selected, and if necessary the
+	 * receiver is scrolled to make the new selection visible.
 	 * <p>
 	 * Items that are not in the receiver are ignored. If the receiver is
-	 * single-select and multiple items are specified, then all items are
-	 * ignored.
+	 * single-select and multiple items are specified, then all items are ignored.
 	 *
-	 * @param items
-	 *            the array of items
+	 * @param items the array of items
 	 *
 	 * @exception IllegalArgumentException
-	 *                <ul>
-	 *                <li>ERROR_NULL_ARGUMENT - if the array of items is
-	 *                null</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_NULL_ARGUMENT - if the array of
+	 *                                     items is null</li>
+	 *                                     </ul>
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                                     <ul>
+	 *                                     <li>ERROR_WIDGET_DISPOSED - if the
+	 *                                     receiver has been disposed</li>
+	 *                                     <li>ERROR_THREAD_INVALID_ACCESS - if not
+	 *                                     called from the thread that created the
+	 *                                     receiver</li>
+	 *                                     </ul>
 	 *
 	 * @see List#deselectAll()
 	 * @see List#select(int[])
@@ -1880,49 +1763,27 @@ public class List extends Scrollable implements ICustomWidget {
 		int length = items.length;
 		if (length == 0 || ((style & SWT.SINGLE) != 0 && length > 1))
 			return;
-		int focusIndex = -1;
-		for (int i = length - 1; i >= 0; --i) {
-			String string = items[i];
-			int index = 0;
-			if (string != null) {
-				int localFocus = -1;
-				while ((index = indexOf(string, index)) != -1) {
-					if (localFocus == -1)
-						localFocus = index;
-					select(index, false);
-					if ((style & SWT.SINGLE) != 0 && isSelected(index)) {
-						showSelection();
-						return;
-					}
-					index++;
-				}
-				if (localFocus != -1)
-					focusIndex = localFocus;
-			}
-		}
-		if ((style & SWT.MULTI) != 0) {
-			if (focusIndex >= 0)
-				setFocusIndex(focusIndex);
+		for (int i = 0; i < length; i++) {
+			select(this.lines.indexOf(items[i]));
 		}
 	}
 
 	/**
 	 * Selects the item at the given zero-relative index in the receiver. If the
 	 * item at the index was already selected, it remains selected. The current
-	 * selection is first cleared, then the new item is selected, and if
-	 * necessary the receiver is scrolled to make the new selection visible.
-	 * Indices that are out of range are ignored.
+	 * selection is first cleared, then the new item is selected, and if necessary
+	 * the receiver is scrolled to make the new selection visible. Indices that are
+	 * out of range are ignored.
 	 *
-	 * @param index
-	 *            the index of the item to select
+	 * @param index the index of the item to select
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 * @see List#deselectAll()
 	 * @see List#select(int)
 	 */
@@ -1930,34 +1791,28 @@ public class List extends Scrollable implements ICustomWidget {
 		checkWidget();
 		deselectAll();
 		select(index, true);
-		if ((style & SWT.MULTI) != 0) {
-			if (index >= 0)
-				setFocusIndex(index);
-		}
 	}
 
 	/**
-	 * Selects the items in the range specified by the given zero-relative
-	 * indices in the receiver. The range of indices is inclusive. The current
-	 * selection is cleared before the new items are selected, and if necessary
-	 * the receiver is scrolled to make the new selection visible.
+	 * Selects the items in the range specified by the given zero-relative indices
+	 * in the receiver. The range of indices is inclusive. The current selection is
+	 * cleared before the new items are selected, and if necessary the receiver is
+	 * scrolled to make the new selection visible.
 	 * <p>
-	 * Indices that are out of range are ignored and no items will be selected
-	 * if start is greater than end. If the receiver is single-select and there
-	 * is more than one item in the given range, then all indices are ignored.
+	 * Indices that are out of range are ignored and no items will be selected if
+	 * start is greater than end. If the receiver is single-select and there is more
+	 * than one item in the given range, then all indices are ignored.
 	 *
-	 * @param start
-	 *            the start index of the items to select
-	 * @param end
-	 *            the end index of the items to select
+	 * @param start the start index of the items to select
+	 * @param end   the end index of the items to select
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 *
 	 * @see List#deselectAll()
 	 * @see List#select(int,int)
@@ -1965,46 +1820,34 @@ public class List extends Scrollable implements ICustomWidget {
 	public void setSelection(int start, int end) {
 		checkWidget();
 		deselectAll();
-		if (end < 0 || start > end
-				|| ((style & SWT.SINGLE) != 0 && start != end))
+		if (end < 0 || start > end || ((style & SWT.SINGLE) != 0 && start != end))
 			return;
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
+		int count = this.lines.size();
 		if (count == 0 || start >= count)
 			return;
 		start = Math.max(0, start);
 		end = Math.min(end, count - 1);
-		if ((style & SWT.SINGLE) != 0) {
-			select(start, true);
-		} else {
-			select(start, end, true);
-			setFocusIndex(start);
-		}
+		select(start, end, true);
 	}
 
 	/**
-	 * Sets the zero-relative index of the item which is currently at the top of
-	 * the receiver. This index can change when items are scrolled or new items
-	 * are added and removed.
+	 * Sets the zero-relative index of the item which is currently at the top of the
+	 * receiver. This index can change when items are scrolled or new items are
+	 * added and removed.
 	 *
-	 * @param index
-	 *            the index of the top item
+	 * @param index the index of the top item
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void setTopIndex(int index) {
 		checkWidget();
-		int result = (int) OS.SendMessage(handle, OS.LB_SETTOPINDEX, index, 0);
-		if (result == OS.LB_ERR) {
-			int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-			index = Math.min(count - 1, Math.max(0, index));
-			OS.SendMessage(handle, OS.LB_SETTOPINDEX, index, 0);
-		}
+		this.topIndex = index;
 	}
 
 	/**
@@ -2013,12 +1856,12 @@ public class List extends Scrollable implements ICustomWidget {
 	 * selection is visible.
 	 *
 	 * @exception SWTException
-	 *                <ul>
-	 *                <li>ERROR_WIDGET_DISPOSED - if the receiver has been
-	 *                disposed</li>
-	 *                <li>ERROR_THREAD_INVALID_ACCESS - if not called from the
-	 *                thread that created the receiver</li>
-	 *                </ul>
+	 *                         <ul>
+	 *                         <li>ERROR_WIDGET_DISPOSED - if the receiver has been
+	 *                         disposed</li>
+	 *                         <li>ERROR_THREAD_INVALID_ACCESS - if not called from
+	 *                         the thread that created the receiver</li>
+	 *                         </ul>
 	 */
 	public void showSelection() {
 		checkWidget();
@@ -2027,8 +1870,7 @@ public class List extends Scrollable implements ICustomWidget {
 			index = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
 		} else {
 			int[] indices = new int[1];
-			int result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, 1,
-					indices);
+			int result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, 1, indices);
 			index = indices[0];
 			if (result != 1)
 				index = -1;
@@ -2047,8 +1889,7 @@ public class List extends Scrollable implements ICustomWidget {
 		int bottomIndex = Math.min(topIndex + visibleCount, count) - 1;
 		if (topIndex <= index && index <= bottomIndex)
 			return;
-		int newTop = Math.min(Math.max(index - (visibleCount / 2), 0),
-				count - 1);
+		int newTop = Math.min(Math.max(index - (visibleCount / 2), 0), count - 1);
 		OS.SendMessage(handle, OS.LB_SETTOPINDEX, newTop, 0);
 	}
 
@@ -2066,14 +1907,12 @@ public class List extends Scrollable implements ICustomWidget {
 				oldFont = OS.SelectObject(hDC, newFont);
 			int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
 			char[] buffer = new char[64 + 1];
-			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN,
-					focusIndex, 0);
+			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, focusIndex, 0);
 			if (length != OS.LB_ERR) {
 				if (length + 1 > buffer.length) {
 					buffer = new char[length + 1];
 				}
-				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT,
-						focusIndex, buffer);
+				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, focusIndex, buffer);
 				if (result != OS.LB_ERR) {
 					OS.DrawText(hDC, buffer, length, rect, flags);
 				}
@@ -2090,8 +1929,7 @@ public class List extends Scrollable implements ICustomWidget {
 		}
 		Point pt = toDisplayInPixels(x, y);
 		int zoom = getZoom();
-		event.setLocation(DPIUtil.scaleDown(pt.x, zoom),
-				DPIUtil.scaleDown(pt.y, zoom));
+		event.setLocation(DPIUtil.scaleDown(pt.x, zoom), DPIUtil.scaleDown(pt.y, zoom));
 	}
 
 	@Override
@@ -2113,39 +1951,33 @@ public class List extends Scrollable implements ICustomWidget {
 		int selection = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
 		addedUCC = false;
 		while (count-- > 0) {
-			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, count,
-					0);
+			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, count, 0);
 			if (length == OS.LB_ERR)
 				break;
 			if (length == 0)
 				continue;
 			char[] buffer = new char[length + 1];
-			if (OS.SendMessage(handle, OS.LB_GETTEXT, count,
-					buffer) == OS.LB_ERR)
+			if (OS.SendMessage(handle, OS.LB_GETTEXT, count, buffer) == OS.LB_ERR)
 				break;
-			if (OS.SendMessage(handle, OS.LB_DELETESTRING, count,
-					0) == OS.LB_ERR)
+			if (OS.SendMessage(handle, OS.LB_DELETESTRING, count, 0) == OS.LB_ERR)
 				break;
 			if ((state & HAS_AUTO_DIRECTION) == 0) {
 				/* Should remove UCC */
 				System.arraycopy(buffer, 1, buffer, 0, length);
 			}
 			/* Adding UCC is handled in OS.LB_INSERTSTRING */
-			if (OS.SendMessage(handle, OS.LB_INSERTSTRING, count,
-					buffer) == OS.LB_ERR)
+			if (OS.SendMessage(handle, OS.LB_INSERTSTRING, count, buffer) == OS.LB_ERR)
 				break;
 		}
 		if (selection != OS.LB_ERR) {
 			OS.SendMessage(handle, OS.LB_SETCURSEL, selection, 0);
 		}
-		return textDirection == AUTO_TEXT_DIRECTION
-				|| super.updateTextDirection(textDirection);
+		return textDirection == AUTO_TEXT_DIRECTION || super.updateTextDirection(textDirection);
 	}
 
 	@Override
 	int widgetStyle() {
-		int bits = super.widgetStyle() | OS.LBS_NOTIFY
-				| OS.LBS_NOINTEGRALHEIGHT;
+		int bits = super.widgetStyle() | OS.LBS_NOTIFY | OS.LBS_NOINTEGRALHEIGHT;
 		if ((style & SWT.SINGLE) != 0)
 			return bits;
 		if ((style & SWT.MULTI) != 0) {
@@ -2166,269 +1998,7 @@ public class List extends Scrollable implements ICustomWidget {
 		return ListProc;
 	}
 
-	@Override
-	long windowProc(long hwnd, int msg, long wParam, long lParam) {
-		/* Below code is to support auto text direction. */
-		if (handle != 0 && lParam != 0 && (state & HAS_AUTO_DIRECTION) != 0) {
-			switch (msg) {
-				case OS.LB_ADDSTRING :
-				case OS.LB_INSERTSTRING :
-				case OS.LB_FINDSTRINGEXACT :
-					int length = OS.wcslen(lParam); // we are always Unicode
-													// here
-					int cp = getCodePage();
-					TCHAR buffer = new TCHAR(cp, length);
-					OS.MoveMemory(buffer, lParam,
-							buffer.length() * TCHAR.sizeof);
-					String string = buffer.toString(0, length);
-					int direction = BidiUtil.resolveTextDirection(string);
-					if (direction == SWT.NONE) {
-						/*
-						 * Force adding a UCC even when no strong characters are
-						 * found. Otherwise, the List items would retain the old
-						 * direction, which might be inappropriate for the new
-						 * text.
-						 */
-						direction = (style & SWT.RIGHT_TO_LEFT) != 0
-								? SWT.RIGHT_TO_LEFT
-								: SWT.LEFT_TO_RIGHT;
-					}
-					string = (direction == SWT.RIGHT_TO_LEFT ? RLE : LRE)
-							+ string;
-					buffer = new TCHAR(cp, string, true);
-					long hHeap = OS.GetProcessHeap();
-					length = buffer.length() * TCHAR.sizeof;
-					long pszText = OS.HeapAlloc(hHeap, OS.HEAP_ZERO_MEMORY,
-							length);
-					OS.MoveMemory(pszText, buffer, length);
-					long code = super.windowProc(hwnd, msg, wParam, pszText);
-					OS.HeapFree(hHeap, 0, pszText);
-					addedUCC = true;
-					return code;
-			}
-		}
-		return super.windowProc(hwnd, msg, wParam, lParam);
-	}
-
-	@Override
-	LRESULT WM_CHAR(long wParam, long lParam) {
-		LRESULT result = super.WM_CHAR(wParam, lParam);
-		if (result != null)
-			return result;
-		/*
-		 * Feature in Windows. The Windows list box does not implement the
-		 * control key interface for multi-select list boxes, making it
-		 * inaccessible from the keyboard. The fix is to implement the key
-		 * processing.
-		 */
-		if (OS.GetKeyState(OS.VK_CONTROL) < 0
-				&& OS.GetKeyState(OS.VK_SHIFT) >= 0) {
-			int bits = OS.GetWindowLong(handle, OS.GWL_STYLE);
-			if ((bits & OS.LBS_EXTENDEDSEL) != 0) {
-				switch ((int) wParam) {
-					case OS.VK_SPACE : {
-						int index = (int) OS.SendMessage(handle,
-								OS.LB_GETCARETINDEX, 0, 0);
-						int code = (int) OS.SendMessage(handle, OS.LB_GETSEL,
-								index, 0);
-						if (code == OS.LB_ERR)
-							break;
-						OS.SendMessage(handle, OS.LB_SETSEL, code != 0 ? 0 : 1,
-								index);
-						OS.SendMessage(handle, OS.LB_SETANCHORINDEX, index, 0);
-						sendSelectionEvent(SWT.Selection);
-						return LRESULT.ZERO;
-					}
-				}
-			}
-		}
-		return result;
-	}
-
-	@Override
-	LRESULT WM_KEYDOWN(long wParam, long lParam) {
-		LRESULT result = super.WM_KEYDOWN(wParam, lParam);
-		if (result != null)
-			return result;
-		/*
-		 * Feature in Windows. The Windows list box does not implement the
-		 * control key interface for multi-select list boxes, making it
-		 * inaccessible from the keyboard. The fix is to implement the key
-		 * processing.
-		 */
-		if (OS.GetKeyState(OS.VK_CONTROL) < 0
-				&& OS.GetKeyState(OS.VK_SHIFT) >= 0) {
-			int bits = OS.GetWindowLong(handle, OS.GWL_STYLE);
-			if ((bits & OS.LBS_EXTENDEDSEL) != 0) {
-				int newIndex = -1;
-				switch ((int) wParam) {
-					case OS.VK_SPACE : {
-						/*
-						 * Ensure that the window proc does not process VK_SPACE
-						 * so that it can be handled in WM_CHAR. This allows the
-						 * application to cancel an operation that is normally
-						 * performed in WM_KEYDOWN from WM_CHAR.
-						 */
-						return LRESULT.ZERO;
-					}
-					case OS.VK_UP :
-					case OS.VK_DOWN : {
-						int oldIndex = (int) OS.SendMessage(handle,
-								OS.LB_GETCARETINDEX, 0, 0);
-						newIndex = Math.max(0, oldIndex
-								+ (((int) wParam) == OS.VK_UP ? -1 : 1));
-						break;
-					}
-					case OS.VK_PRIOR : {
-						int topIndex = (int) OS.SendMessage(handle,
-								OS.LB_GETTOPINDEX, 0, 0);
-						int oldIndex = (int) OS.SendMessage(handle,
-								OS.LB_GETCARETINDEX, 0, 0);
-						if (oldIndex != topIndex) {
-							newIndex = topIndex;
-						} else {
-							forceResize();
-							RECT rect = new RECT();
-							OS.GetClientRect(handle, rect);
-							int itemHeight = (int) OS.SendMessage(handle,
-									OS.LB_GETITEMHEIGHT, 0, 0);
-							int pageSize = Math.max(2,
-									(rect.bottom / itemHeight));
-							newIndex = Math.max(0, topIndex - (pageSize - 1));
-						}
-						break;
-					}
-					case OS.VK_NEXT : {
-						int topIndex = (int) OS.SendMessage(handle,
-								OS.LB_GETTOPINDEX, 0, 0);
-						int oldIndex = (int) OS.SendMessage(handle,
-								OS.LB_GETCARETINDEX, 0, 0);
-						forceResize();
-						RECT rect = new RECT();
-						OS.GetClientRect(handle, rect);
-						int itemHeight = (int) OS.SendMessage(handle,
-								OS.LB_GETITEMHEIGHT, 0, 0);
-						int pageSize = Math.max(2, (rect.bottom / itemHeight));
-						int bottomIndex = topIndex + pageSize - 1;
-						if (oldIndex != bottomIndex) {
-							newIndex = bottomIndex;
-						} else {
-							newIndex = bottomIndex + pageSize - 1;
-						}
-						int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT,
-								0, 0);
-						if (count != OS.LB_ERR)
-							newIndex = Math.min(count - 1, newIndex);
-						break;
-					}
-					case OS.VK_HOME : {
-						newIndex = 0;
-						break;
-					}
-					case OS.VK_END : {
-						int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT,
-								0, 0);
-						if (count == OS.LB_ERR)
-							break;
-						newIndex = count - 1;
-						break;
-					}
-				}
-				if (newIndex != -1) {
-					/*
-					 * Feature in Windows. When the user changes focus using the
-					 * keyboard, the focus indicator does not draw. The fix is
-					 * to update the UI state for the control whenever the focus
-					 * indicator changes as a result of something the user
-					 * types.
-					 */
-					int uiState = (int) OS.SendMessage(handle,
-							OS.WM_QUERYUISTATE, 0, 0);
-					if ((uiState & OS.UISF_HIDEFOCUS) != 0) {
-						OS.SendMessage(handle, OS.WM_CHANGEUISTATE,
-								OS.UIS_INITIALIZE, 0);
-						/*
-						 * Bug in Windows. When the WM_CHANGEUISTATE is used to
-						 * update the UI state for a list that has been selected
-						 * using Shift+Arrow, the focus indicator has pixel
-						 * corruption. The fix is to redraw the control.
-						 */
-						RECT itemRect = new RECT();
-						int oldIndex = (int) OS.SendMessage(handle,
-								OS.LB_GETCARETINDEX, 0, 0);
-						OS.SendMessage(handle, OS.LB_GETITEMRECT, oldIndex,
-								itemRect);
-						OS.InvalidateRect(handle, itemRect, true);
-					}
-					OS.SendMessage(handle, OS.LB_SETCARETINDEX, newIndex, 0);
-					return LRESULT.ZERO;
-				}
-			}
-		}
-		return result;
-	}
-
-	@Override
-	LRESULT WM_SETREDRAW(long wParam, long lParam) {
-		LRESULT result = super.WM_SETREDRAW(wParam, lParam);
-		if (result != null)
-			return result;
-		/*
-		 * Bug in Windows. When WM_SETREDRAW is used to turn off redraw for a
-		 * list, table or tree, the background of the control is drawn. The fix
-		 * is to call DefWindowProc(), which stops all graphics output to the
-		 * control.
-		 */
-		OS.DefWindowProc(handle, OS.WM_SETREDRAW, wParam, lParam);
-		return result;
-	}
-
-	@Override
-	LRESULT WM_SIZE(long wParam, long lParam) {
-		/*
-		 * Bug in Windows. If the top index is changed while the list is being
-		 * resized, Windows does not redraw properly when their is white space
-		 * at the bottom of the control. The fix is to detect when the top index
-		 * has changed and redraw the control.
-		 *
-		 * Bug in Windows. If the receiver is scrolled horizontally and is
-		 * resized, the list does not redraw properly. The fix is to redraw the
-		 * control when the horizontal scroll bar is not at the beginning.
-		 */
-		int oldIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
-		LRESULT result = super.WM_SIZE(wParam, lParam);
-		if (!isDisposed()) {
-			SCROLLINFO info = new SCROLLINFO();
-			info.cbSize = SCROLLINFO.sizeof;
-			info.fMask = OS.SIF_POS;
-			if (OS.GetScrollInfo(handle, OS.SB_HORZ, info)) {
-				if (info.nPos != 0)
-					OS.InvalidateRect(handle, null, true);
-			}
-			int newIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0,
-					0);
-			if (oldIndex != newIndex)
-				OS.InvalidateRect(handle, null, true);
-		}
-		return result;
-	}
-
-	@Override
-	LRESULT wmCommandChild(long wParam, long lParam) {
-		int code = OS.HIWORD(wParam);
-		switch (code) {
-			case OS.LBN_SELCHANGE :
-				sendSelectionEvent(SWT.Selection);
-				break;
-			case OS.LBN_DBLCLK :
-				sendSelectionEvent(SWT.DefaultSelection);
-				break;
-		}
-		return super.wmCommandChild(wParam, lParam);
-	}
-
-	private static void handleDPIChange(Widget widget, int newZoom,
-			float scalingFactor) {
+	private static void handleDPIChange(Widget widget, int newZoom, float scalingFactor) {
 		if (!(widget instanceof List list)) {
 			return;
 		}

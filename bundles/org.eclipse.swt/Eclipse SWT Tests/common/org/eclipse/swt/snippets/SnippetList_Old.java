@@ -33,27 +33,30 @@ public class SnippetList_Old {
 		final Display display = new Display();
 		final Shell shell = new Shell(display);
 		shell.setText("Composite.setBackgroundMode()");
-		shell.setLayout(new RowLayout(SWT.VERTICAL));
+		shell.setLayout(new GridLayout(1, false));
+		shell.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
-		Color color = display.getSystemColor(SWT.COLOR_CYAN);
+//		Color color = display.getSystemColor(SWT.COLOR_CYAN);
+//
+//		Group group = new Group(shell, SWT.NONE);
+//		group.setText("SWT.INHERIT_NONE");
+//		group.setBackground(color);
+//		group.setBackgroundMode(SWT.INHERIT_NONE);
+//		createChildren(group);
+//
+//		group = new Group(shell, SWT.NONE);
+//		group.setBackground(color);
+//		group.setText("SWT.INHERIT_DEFAULT");
+//		group.setBackgroundMode(SWT.INHERIT_DEFAULT);
+//		createChildren(group);
+//
+//		group = new Group(shell, SWT.NONE);
+//		group.setBackground(color);
+//		group.setText("SWT.INHERIT_FORCE");
+//		group.setBackgroundMode(SWT.INHERIT_FORCE);
+//		createChildren(group);
 
-		Group group = new Group(shell, SWT.NONE);
-		group.setText("SWT.INHERIT_NONE");
-		group.setBackground(color);
-		group.setBackgroundMode(SWT.INHERIT_NONE);
-		createChildren(group);
-
-		group = new Group(shell, SWT.NONE);
-		group.setBackground(color);
-		group.setText("SWT.INHERIT_DEFAULT");
-		group.setBackgroundMode(SWT.INHERIT_DEFAULT);
-		createChildren(group);
-
-		group = new Group(shell, SWT.NONE);
-		group.setBackground(color);
-		group.setText("SWT.INHERIT_FORCE");
-		group.setBackgroundMode(SWT.INHERIT_FORCE);
-		createChildren(group);
+		createChildren(shell);
 
 		shell.pack();
 		shell.open();
@@ -63,10 +66,15 @@ public class SnippetList_Old {
 		}
 		display.dispose();
 	}
+
 	static void createChildren(Composite parent) {
-		parent.setLayout(new RowLayout());
-		List_Old list = new List_Old(parent, SWT.BORDER | SWT.MULTI);
-		list.add("List item 1");
-		list.add("List item 2");
+//		parent.setLayout(new GridLayout());
+		List_Old list = new List_Old(parent, SWT.FILL | SWT.BORDER | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+		list.add("Hi");
+		list.add("Hi Hello");
+		list.add("Hi Hello How");
+		list.add("Hi Hello How Are");
+		list.add("Hi Hello How Are You");
+		list.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 	}
 }
