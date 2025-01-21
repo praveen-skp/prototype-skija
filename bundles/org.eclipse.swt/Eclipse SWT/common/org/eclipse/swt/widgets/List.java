@@ -62,13 +62,10 @@ public class List extends Scrollable implements ICustomWidget {
 	java.util.List<String> lines = new ArrayList<>();
 	java.util.List<Integer> selectedLines = new ArrayList<>();
 
-	Integer topIndex = 0;
-	Integer lastSelectedItem = 0;
-	private int previousVerticalScrollPosition = 0;
+	private int topIndex = 0;
+	private Integer lastSelectedItem = 0;
 	private Listener listener;
 	private boolean hasMouseEntered;
-	private static final Color SELECTION_COLOR = new Color(Display.getDefault(), 0, 95, 184);
-	private static final Color HOVER_COLOR = new Color(Display.getDefault(), 224, 238, 254);
 
 	/**
 	 * Constructs a new instance of this class given its parent and a style value
@@ -258,12 +255,6 @@ public class List extends Scrollable implements ICustomWidget {
 		gc.dispose();
 		return height;
 	}
-
-//	private int getLineHeight(GC gc) {
-//		checkWidget();
-//		String str = this.lines.get(0);
-//		return gc.textExtent(str).y;
-//	}
 
 	private Point computeTextSize() {
 		GC gc = new GC(this);
@@ -755,22 +746,8 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 		if (indices.length == 0)
 			return;
-		if ((style & SWT.SINGLE) != 0) {
-			int oldIndex = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-			if (oldIndex == OS.LB_ERR)
-				return;
-			for (int index : indices) {
-				if (oldIndex == index) {
-					OS.SendMessage(handle, OS.LB_SETCURSEL, -1, 0);
-					return;
-				}
-			}
-			return;
-		}
 		for (int index : indices) {
-			if (index != -1) {
-				OS.SendMessage(handle, OS.LB_SETSEL, 0, index);
-			}
+			deselect(index);
 		}
 	}
 
@@ -793,7 +770,7 @@ public class List extends Scrollable implements ICustomWidget {
 		checkWidget();
 		if (index == -1)
 			return;
-		this.selectedLines.remove(index);
+		this.selectedLines.remove(Integer.valueOf(index));
 	}
 
 	/**
@@ -816,29 +793,11 @@ public class List extends Scrollable implements ICustomWidget {
 	 */
 	public void deselect(int start, int end) {
 		checkWidget();
-		if (start > end)
+		if (start < 0 || end < 0 || start > end || start >= lines.size())
 			return;
-		if ((style & SWT.SINGLE) != 0) {
-			int oldIndex = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-			if (oldIndex == OS.LB_ERR)
-				return;
-			if (start <= oldIndex && oldIndex <= end) {
-				OS.SendMessage(handle, OS.LB_SETCURSEL, -1, 0);
-			}
-			return;
+		for (int i = start; i <= end; i++) {
+			deselect(i);
 		}
-		/*
-		 * Ensure that at least one item is contained in the range from start to end.
-		 * Note that when start = end, LB_SELITEMRANGEEX deselects the item.
-		 */
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (start < 0 && end < 0)
-			return;
-		if (start >= count && end >= count)
-			return;
-		start = Math.min(count - 1, Math.max(0, start));
-		end = Math.min(count - 1, Math.max(0, end));
-		OS.SendMessage(handle, OS.LB_SELITEMRANGEEX, end, start);
 	}
 
 	/**
@@ -1459,12 +1418,9 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	void select(int index, boolean scroll) {
-		if (index < 0)
+		if (index < 0 || index >= this.lines.size()) {
 			return;
-		int count = this.lines.size();
-		if (index >= count)
-			return;
-		System.out.println("Select-LastSelectedItem: " + index);
+		}
 		this.selectedLines.add(index);
 		this.lastSelectedItem = index;
 		redraw();
@@ -1498,7 +1454,7 @@ public class List extends Scrollable implements ICustomWidget {
 		checkWidget();
 		if (end < 0 || start > end || ((style & SWT.SINGLE) != 0 && start != end))
 			return;
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
+		int count = this.lines.size();
 		if (count == 0 || start >= count)
 			return;
 		start = Math.max(0, start);
@@ -1511,9 +1467,6 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	void select(int start, int end, boolean scroll) {
-		/*
-		 * Note that when start = end, LB_SELITEMRANGEEX deselects the item.
-		 */
 		if (start == end) {
 			select(start, scroll);
 			return;
