@@ -983,16 +983,7 @@ public class List extends Scrollable implements ICustomWidget {
 	 */
 	public int getSelectionCount() {
 		checkWidget();
-		if ((style & SWT.SINGLE) != 0) {
-			int result = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-			if (result == OS.LB_ERR)
-				return 0;
-			return 1;
-		}
-		int result = (int) OS.SendMessage(handle, OS.LB_GETSELCOUNT, 0, 0);
-		if (result == OS.LB_ERR)
-			error(SWT.ERROR_CANNOT_GET_COUNT);
-		return result;
+		return this.selectedLines.size();
 	}
 
 	/**
@@ -1011,25 +1002,7 @@ public class List extends Scrollable implements ICustomWidget {
 	 */
 	public int getSelectionIndex() {
 		checkWidget();
-		if ((style & SWT.SINGLE) != 0) {
-			return (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-		}
-		int count = (int) OS.SendMessage(handle, OS.LB_GETSELCOUNT, 0, 0);
-		if (count == OS.LB_ERR)
-			error(SWT.ERROR_CANNOT_GET_SELECTION);
-		if (count == 0)
-			return -1;
-		int index = (int) OS.SendMessage(handle, OS.LB_GETCARETINDEX, 0, 0);
-		int result = (int) OS.SendMessage(handle, OS.LB_GETSEL, index, 0);
-		if (result == OS.LB_ERR)
-			error(SWT.ERROR_CANNOT_GET_SELECTION);
-		if (result != 0)
-			return index;
-		int[] buffer = new int[1];
-		result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, 1, buffer);
-		if (result != 1)
-			error(SWT.ERROR_CANNOT_GET_SELECTION);
-		return buffer[0];
+		return (getSelectionIndices().length > 0) ? getSelectionIndices()[0] : -1;
 	}
 
 	/**
@@ -1053,20 +1026,7 @@ public class List extends Scrollable implements ICustomWidget {
 	 */
 	public int[] getSelectionIndices() {
 		checkWidget();
-		if ((style & SWT.SINGLE) != 0) {
-			int result = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-			if (result == OS.LB_ERR)
-				return new int[0];
-			return new int[] { result };
-		}
-		int length = (int) OS.SendMessage(handle, OS.LB_GETSELCOUNT, 0, 0);
-		if (length == OS.LB_ERR)
-			error(SWT.ERROR_CANNOT_GET_SELECTION);
-		int[] indices = new int[length];
-		int result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, length, indices);
-		if (result != length)
-			error(SWT.ERROR_CANNOT_GET_SELECTION);
-		return indices;
+		return this.selectedLines.stream().mapToInt(Integer::intValue).toArray();
 	}
 
 	/**
@@ -1582,63 +1542,56 @@ public class List extends Scrollable implements ICustomWidget {
 		redraw();
 	}
 
+	private int getTextWidth(String text) {
+		GC gc = new GC(this);
+		int width = gc.textExtent(text).x;
+		gc.dispose();
+		return width;
+	}
+
 	/**
 	 * Calculates the scroll width depending on the item with the highest width
 	 */
 	void setScrollWidth() {
 		int newWidth = 0;
-		RECT rect = new RECT();
-		long newFont, oldFont = 0;
-		long hDC = OS.GetDC(handle);
-		newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-		if (newFont != 0)
-			oldFont = OS.SelectObject(hDC, newFont);
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
-		for (int i = 0; i < count; i++) {
-			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, i, 0);
-			if (length != OS.LB_ERR) {
-				char[] buffer = new char[length + 1];
-				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, i, buffer);
-				if (result != OS.LB_ERR) {
-					OS.DrawText(hDC, buffer, length, rect, flags);
-					newWidth = Math.max(newWidth, rect.right - rect.left);
-				}
-			}
+		for (String line : this.lines) {
+			newWidth = Math.max(newWidth, getTextWidth(line));
 		}
-		if (newFont != 0)
-			OS.SelectObject(hDC, oldFont);
-		OS.ReleaseDC(handle, hDC);
-		OS.SendMessage(handle, OS.LB_SETHORIZONTALEXTENT, newWidth + INSET, 0);
+		if (horizontalBar != null) {
+			horizontalBar.setMaximum(newWidth + INSET);
+		}
 	}
 
 	void setScrollWidth(char[] buffer, boolean grow) {
-		RECT rect = new RECT();
-		long newFont, oldFont = 0;
-		long hDC = OS.GetDC(handle);
-		newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-		if (newFont != 0)
-			oldFont = OS.SelectObject(hDC, newFont);
-		int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
-		OS.DrawText(hDC, buffer, -1, rect, flags);
-		if (newFont != 0)
-			OS.SelectObject(hDC, oldFont);
-		OS.ReleaseDC(handle, hDC);
-		setScrollWidth(rect.right - rect.left, grow);
+		GC gc = new GC(this);
+		gc.setFont(getFont());
+		Point textExtent = gc.textExtent(new String(buffer));
+		gc.dispose();
+
+		setScrollWidth(textExtent.x, grow);
 	}
 
 	void setScrollWidth(int newWidth, boolean grow) {
 		newWidth += INSET;
-		int width = (int) OS.SendMessage(handle, OS.LB_GETHORIZONTALEXTENT, 0, 0);
+		int width = getCurrentScrollWidth();
 		if (grow) {
 			if (newWidth <= width)
 				return;
-			OS.SendMessage(handle, OS.LB_SETHORIZONTALEXTENT, newWidth, 0);
+			if (horizontalBar != null) {
+				horizontalBar.setMaximum(newWidth);
+			}
 		} else {
 			if (newWidth < width)
 				return;
 			setScrollWidth();
 		}
+	}
+
+	private int getCurrentScrollWidth() {
+		if (getHorizontalBar() != null) {
+			return getHorizontalBar().getMaximum();
+		}
+		return 0;
 	}
 
 	/**
@@ -1675,7 +1628,7 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 		deselectAll();
 		int length = indices.length;
-		if (length == 0 || ((style & SWT.SINGLE) != 0 && length > 1))
+		if (length == 0)
 			return;
 		select(indices, true);
 	}
@@ -1714,7 +1667,7 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 		deselectAll();
 		int length = items.length;
-		if (length == 0 || ((style & SWT.SINGLE) != 0 && length > 1))
+		if (length == 0)
 			return;
 		for (int i = 0; i < length; i++) {
 			select(this.lines.indexOf(items[i]));
@@ -1773,7 +1726,7 @@ public class List extends Scrollable implements ICustomWidget {
 	public void setSelection(int start, int end) {
 		checkWidget();
 		deselectAll();
-		if (end < 0 || start > end || ((style & SWT.SINGLE) != 0 && start != end))
+		if (end < 0 || start > end)
 			return;
 		int count = this.lines.size();
 		if (count == 0 || start >= count)
