@@ -20,7 +20,7 @@ public class List extends Scrollable implements ICustomWidget {
 	public List(Composite parent, int style) {
 		super(parent, checkStyle(style));
 		addListeners();
-		showScrollBar();
+//		showScrollBar();
 	}
 
 	private void showScrollBar() {
@@ -33,27 +33,21 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	private void addListeners() {
-		addDisposeListener(e -> List.this.widgetDisposed(e));
-		addPaintListener(e -> List.this.paintControl(e));
-		addKeyListener(new KeyListener() {
+		addDisposeListener(e -> dispose());
+		addPaintListener(this::paintControl);
+
+		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				onKeyReleased(e);
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-				onKeyPressed(e);
 			}
 		});
 
 		ScrollBar horizontalBar = getHorizontalBar();
 		if (horizontalBar != null) {
 			horizontalBar.addSelectionListener(new SelectionAdapter() {
-
 				@Override
 				public void widgetSelected(SelectionEvent e) {
-					super.widgetSelected(e);
 					List.this.scrollBarSelectionChanged(e);
 				}
 			});
@@ -61,10 +55,8 @@ public class List extends Scrollable implements ICustomWidget {
 		ScrollBar verticalBar = getVerticalBar();
 		if (verticalBar != null) {
 			verticalBar.addSelectionListener(new SelectionAdapter() {
-
 				@Override
 				public void widgetSelected(SelectionEvent e) {
-					super.widgetSelected(e);
 					List.this.topIndex = verticalBar.getSelection();
 					List.this.scrollBarSelectionChanged(e);
 				}
@@ -72,35 +64,33 @@ public class List extends Scrollable implements ICustomWidget {
 		}
 
 		addMouseListener(new MouseAdapter() {
-
 			@Override
 			public void mouseDown(MouseEvent e) {
-				super.mouseDown(e);
 				List.this.onMouseDown(e);
 			}
 
 			@Override
 			public void mouseUp(MouseEvent e) {
-				super.mouseUp(e);
 				List.this.onMouseUp(e);
 			}
+		});
 
+		addListener(SWT.Resize, event -> {
+			if (event.type == SWT.Resize) {
+				onResize();
+			}
 		});
 	}
 
-	private void widgetDisposed(DisposeEvent e) {
-		this.dispose();
+	private void onResize() {
+		redraw();
 	}
 
 	private void paintControl(PaintEvent e) {
 		if (!isVisible()) {
 			return;
 		}
-		GC gc = e.gc;
-		if (gc == null) {
-			gc = new GC(this);
-			e.gc = gc;
-		}
+		GC gc = e.gc != null ? e.gc : new GC(this);
 		doPaint(e);
 		gc.dispose();
 	}
@@ -130,82 +120,76 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	private void drawText(PaintEvent e, Rectangle visibleArea) {
-		String[] lines = this.items.toArray(new String[0]);
-		for (int i = 0; i < lines.length; i++) {
-			String line = lines[i];
-			drawTextLine(line, i, e.x, e.y, visibleArea, e.gc);
+		for (int i = 0; i < this.items.size(); i++) {
+			drawTextLine(items.get(i), i, e.x, e.y, visibleArea, e.gc);
 		}
 	}
 
 	private void drawTextLine(String text, int lineNumber, int x, int y, Rectangle visibleArea, GC gc) {
-		Point completeTextExtent = gc.textExtent(text);
+		Point textExtent = gc.textExtent(text);
 		Rectangle clientArea = getClientArea();
-		int _x;
-		if ((style & SWT.CENTER) != 0) {
-			_x = (clientArea.width - completeTextExtent.x) / 2;
-		} else if ((style & SWT.RIGHT) != 0) {
-			_x = clientArea.width - completeTextExtent.x;
-		} else { // ((style & SWT.LEFT) != 0)
-			_x = x;
-		}
+
+		int _x = calculateHorizontalAlignment(x, textExtent, clientArea);
+		int _y = y + lineNumber * textExtent.y - visibleArea.y;
+
 		_x -= visibleArea.x;
-		int _y = y + lineNumber * completeTextExtent.y - visibleArea.y;
+
 		if ((style & SWT.BORDER) != 0) {
-			_x += getBorderWidth();
-			_y += getBorderWidth();
+			int borderWidth = getBorderWidth();
+			_x += borderWidth;
+			_y += borderWidth;
 		}
+
 		// handle Vertical Scroll
-		int sizeWithTopIndex = this.topIndex * completeTextExtent.y;
-//		System.out.println("Y position " + _y + " sizeWithTop: " + sizeWithTopIndex);
-		_y -= sizeWithTopIndex;
+		_y -= this.topIndex * textExtent.y;
 		// handle Horizontal Scroll
-		int hSelection = getHorizontalBar().getSelection();
-		_x -= hSelection;
-//		adjustCanvasSize(gc);
+		_x -= getHorizontalBar().getSelection();
+
 		if (this.selectedItems.size() != 0 && this.selectedItems.contains(lineNumber)) {
-			Color background = gc.getBackground();
-			Color foreground = gc.getForeground();
-			gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION_TEXT));
-			gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION));
-			gc.drawText(text, _x, _y);
-			gc.setForeground(foreground);
-			gc.setBackground(background);
+			drawSelectedText(text, gc, _x, _y);
 		} else {
-			gc.drawText(text, _x, _y);
+			gc.drawText(text, _x, _y, true);
 		}
+	}
+
+	private void drawSelectedText(String text, GC gc, int _x, int _y) {
+		Color background = gc.getBackground();
+		Color foreground = gc.getForeground();
+		gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION_TEXT));
+		gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION));
+		gc.drawText(text, _x, _y);
+		gc.setForeground(foreground);
+		gc.setBackground(background);
+	}
+
+	private int calculateHorizontalAlignment(int x, Point textExtent, Rectangle clientArea) {
+		if ((style & SWT.CENTER) != 0) {
+			return (clientArea.width - textExtent.x) / 2;
+		} else if ((style & SWT.RIGHT) != 0) {
+			return clientArea.width - textExtent.x;
+		}
+		return x;
 	}
 
 	private void onKeyPressed(KeyEvent event) {
 	}
 
 	private void onKeyReleased(KeyEvent event) {
-		if ((event.stateMask & SWT.SHIFT) != 0) {
-			handleArrowKeys(event.keyCode, true);
-		} else if (event.stateMask == 0) {
-			handleArrowKeys(event.keyCode, false);
+		boolean isShiftPressed = (event.stateMask & SWT.SHIFT) != 0;
+		switch (event.keyCode) {
+		case SWT.ARROW_DOWN -> handleArrowKeys(1, isShiftPressed);
+		case SWT.ARROW_UP -> handleArrowKeys(-1, isShiftPressed);
+		default -> {
 		}
+		}
+		redraw();
 	}
 
-	private void handleArrowKeys(int keyCode, boolean isShiftPressed) {
-		switch (keyCode) {
-		case SWT.ARROW_DOWN:
-			if (isShiftPressed) {
-				selectMultipleLine(1);
-			} else {
-				moveSelectedLine(1);
-			}
-			redraw();
-			break;
-		case SWT.ARROW_UP:
-			if (isShiftPressed) {
-				selectMultipleLine(-1);
-			} else {
-				moveSelectedLine(-1);
-			}
-			redraw();
-			break;
-		default:
-			break;
+	private void handleArrowKeys(int offset, boolean isShiftPressed) {
+		if (isShiftPressed) {
+			selectMultipleLine(offset);
+		} else {
+			moveSelectedLine(offset);
 		}
 	}
 
@@ -213,29 +197,23 @@ public class List extends Scrollable implements ICustomWidget {
 		int newIndex = calculateNewIndex(this.lastSelectedItem, offset);
 		if (this.selectedItems.contains(newIndex)) {
 			this.selectedItems.remove(Integer.valueOf(newIndex - offset));
-			this.lastSelectedItem = newIndex;
 		} else {
 			this.selectedItems.add(newIndex);
-			this.lastSelectedItem = newIndex;
 		}
+		this.lastSelectedItem = newIndex;
 	}
 
 	private void moveSelectedLine(int offset) {
 		if (this.selectedItems.size() == 1) {
-			int currentIndex = this.selectedItems.get(0);
-			int newIndex = calculateNewIndex(currentIndex, offset);
-			this.selectedItems.set(0, newIndex);
+			int currentIndex = selectedItems.iterator().next();
+			selectedItems.clear();
+			selectedItems.add(calculateNewIndex(currentIndex, offset));
 		}
 	}
 
 	private int calculateNewIndex(int currentIndex, int offset) {
 		int newIndex = currentIndex + offset;
-		if (newIndex < 0) {
-			newIndex = 0;
-		} else if (newIndex > this.items.size() - 1) {
-			newIndex = this.items.size() - 1;
-		}
-		return newIndex;
+		return Math.max(0, Math.min(newIndex, items.size() - 1));
 	}
 
 	private void scrollBarSelectionChanged(SelectionEvent e) {
@@ -269,6 +247,13 @@ public class List extends Scrollable implements ICustomWidget {
 		}
 	}
 
+	private void toggleSelectedLine(MouseEvent e) {
+		Integer selectedLine = Integer.valueOf(getTextLocation(e.x, e.y));
+		this.selectedItems.clear();
+		this.selectedItems.add(selectedLine);
+		this.lastSelectedItem = selectedLine;
+	}
+
 	private int getTextLocation(int selectedX, int selectedY) {
 		Rectangle visibleArea = getVisibleArea();
 		int y = Math.max(selectedY + visibleArea.y, 0);
@@ -282,8 +267,10 @@ public class List extends Scrollable implements ICustomWidget {
 
 	private int getLineHeight(GC gc) {
 		checkWidget();
-		String str = this.items.get(0);
-		return gc.textExtent(str).y;
+		if (this.items.isEmpty()) {
+			return 0;
+		}
+		return gc.textExtent(this.items.get(0)).y;
 	}
 
 	private void adjustCanvasSize(GC gc) {
@@ -307,16 +294,6 @@ public class List extends Scrollable implements ICustomWidget {
 
 		// Adjust canvas size to fit content
 		this.setSize(maxTextExtent.x + 20, maxTextExtent.y + 20); // Add padding
-	}
-
-
-
-	private void toggleSelectedLine(MouseEvent e) {
-		Integer selectedLine = Integer.valueOf(getTextLocation(e.x, e.y));
-		this.selectedItems.clear();
-		System.out.println("ToggleSelectedLine");
-		this.selectedItems.add(selectedLine);
-		this.lastSelectedItem = selectedLine;
 	}
 
 	public void add(String string) {
@@ -343,7 +320,7 @@ public class List extends Scrollable implements ICustomWidget {
 		gc.setFont(getFont());
 		int width = 0, height = 0;
 		if ((style & SWT.SINGLE) != 0) {
-			String str = this.items.get(0);
+			String str = this.items.isEmpty() ? "" : this.items.get(0);
 			Point size = gc.textExtent(str);
 			if (str.length() > 0) {
 				width = (int) Math.ceil(size.x);
@@ -355,7 +332,7 @@ public class List extends Scrollable implements ICustomWidget {
 				size = gc.textExtent(line);
 				width = Math.max(width, size.x);
 			}
-			height = size.y * this.items.size();
+			height = size != null ? size.y * this.items.size() : 0;
 			if (horizontalBar != null) {
 				height += horizontalBar.getSize().y;
 			}
@@ -371,34 +348,22 @@ public class List extends Scrollable implements ICustomWidget {
 
 	private void updateScrollBarWithTextSize() {
 		Rectangle clientArea = getClientArea();
-		int height = clientArea.height;
-		int thumb = height / getLineHeight();
-		verticalBar.setMaximum(this.items.size());
-		verticalBar.setMinimum(0);
-		verticalBar.setThumb(thumb);
-
 		Point maxTextSize = computeTextSize();
-		horizontalBar.setThumb(clientArea.width / maxTextSize.x);
-		horizontalBar.setMaximum(maxTextSize.x);
-		horizontalBar.setMinimum(0);
-//		if (verticalBar != null) {
-//			if (maxTextSize.y > clientArea.height) {
-//				verticalBar.setVisible(true);
-//				verticalBar.setMaximum(maxTextSize.y);
-//			} else {
-//				verticalBar.setVisible(false);
-//			}
-//		}
-//		if (horizontalBar != null) {
-//			if (maxTextSize.x > clientArea.width) {
-//				horizontalBar.setMaximum(maxTextSize.x);
-//				horizontalBar.setIncrement(10);
-//				horizontalBar.setVisible(true);
-//			} else {
-//				horizontalBar.setVisible(false);
-//			}
-//		}
 
+		if (verticalBar != null) {
+			int thumb = clientArea.height / getLineHeight();
+			verticalBar.setMaximum(this.items.size());
+			verticalBar.setMinimum(0);
+			verticalBar.setThumb(thumb);
+			verticalBar.setVisible(maxTextSize.y > clientArea.height);
+		}
+
+		if (horizontalBar != null) {
+			horizontalBar.setMaximum(maxTextSize.x);
+			horizontalBar.setMinimum(0);
+			horizontalBar.setThumb(clientArea.width / maxTextSize.x);
+			horizontalBar.setVisible(maxTextSize.x > clientArea.width);
+		}
 	}
 
 	public void add(String string, int index) {
@@ -423,8 +388,6 @@ public class List extends Scrollable implements ICustomWidget {
 		checkWidget();
 		if (indices == null)
 			error(SWT.ERROR_NULL_ARGUMENT);
-		if (indices.length == 0)
-			return;
 		for (int index : indices) {
 			deselect(index);
 		}
@@ -432,17 +395,17 @@ public class List extends Scrollable implements ICustomWidget {
 
 	public void deselect(int index) {
 		checkWidget();
-		if (index == -1)
-			return;
-		this.selectedItems.remove(Integer.valueOf(index));
+		if (index != -1) {
+			this.selectedItems.remove(Integer.valueOf(index));
+		}
 	}
 
 	public void deselect(int start, int end) {
 		checkWidget();
-		if (start < 0 || end < 0 || start > end || start >= items.size())
-			return;
-		for (int i = start; i <= end; i++) {
-			deselect(i);
+		if (start >= 0 && end >= 0 && start <= end && start < items.size()) {
+			for (int i = start; i <= end; i++) {
+				deselect(i);
+			}
 		}
 	}
 
