@@ -143,7 +143,9 @@ public class List extends Scrollable implements ICustomWidget {
 		// handle Vertical Scroll
 		_y -= this.topIndex * textExtent.y;
 		// handle Horizontal Scroll
-		_x -= getHorizontalBar().getSelection();
+		if (horizontalBar != null) {
+			_x -= horizontalBar.getSelection();
+		}
 
 		if (this.selectedItems.size() != 0 && this.selectedItems.contains(lineNumber)) {
 			drawSelectedText(text, gc, _x, _y);
