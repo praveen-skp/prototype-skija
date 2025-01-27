@@ -10,6 +10,7 @@ import org.eclipse.swt.internal.win32.*;
 
 public class List extends Scrollable implements ICustomWidget {
 	static final int INSET = 3;
+	boolean addedUCC = false;
 
 	private java.util.List<String> items = new ArrayList<>();
 	private java.util.List<Integer> selectedItems = new ArrayList<>();
@@ -418,13 +419,13 @@ public class List extends Scrollable implements ICustomWidget {
 
 	public int getFocusIndex() {
 		checkWidget();
-		int result = (int) OS.SendMessage(handle, OS.LB_GETCARETINDEX, 0, 0);
-		if (result == 0) {
-			int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-			if (count == 0)
-				return -1;
+		if (this.items.isEmpty()) {
+			return -1;
 		}
-		return result;
+		if (this.selectedItems.isEmpty()) {
+			return -1;
+		}
+		return this.selectedItems.get(0);
 	}
 
 	public String getItem(int index) {
@@ -442,11 +443,21 @@ public class List extends Scrollable implements ICustomWidget {
 		return DPIUtil.scaleDown(getItemHeightInPixels(), getZoom());
 	}
 
-	int getItemHeightInPixels() {
-		int result = (int) OS.SendMessage(handle, OS.LB_GETITEMHEIGHT, 0, 0);
-		if (result == OS.LB_ERR)
+	public int getItemHeightInPixels() {
+		checkWidget();
+
+		if (this.items.isEmpty()) {
+			return 0;
+		}
+		GC gc = new GC(this);
+		gc.setFont(getFont());
+		int itemHeight = gc.textExtent(this.items.get(0)).y;
+		gc.dispose();
+
+		if (itemHeight <= 0) {
 			error(SWT.ERROR_CANNOT_GET_ITEM_HEIGHT);
-		return result;
+		}
+		return itemHeight;
 	}
 
 	public String[] getItems() {
@@ -639,11 +650,15 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	void setFocusIndex(int index) {
-		// checkWidget ();
-		int count = this.items.size();
-		if (!(0 <= index && index < count))
+		checkWidget();
+		if (index < 0 || index >= this.items.size()) {
 			return;
-//		OS.SendMessage(handle, OS.LB_SETCARETINDEX, index, 0);
+		}
+
+		selectedItems.clear();
+		selectedItems.add(index);
+		lastSelectedItem = index;
+		redraw();
 	}
 
 	@Override
@@ -776,127 +791,31 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	public void showSelection() {
-		checkWidget();
-		int index;
-		if ((style & SWT.SINGLE) != 0) {
-			index = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-		} else {
-			int[] indices = new int[1];
-			int result = (int) OS.SendMessage(handle, OS.LB_GETSELITEMS, 1, indices);
-			index = indices[0];
-			if (result != 1)
-				index = -1;
+		if (this.selectedItems.isEmpty() || this.items.isEmpty()) {
+			return;
 		}
-		if (index == -1)
+
+		int selectedIndex = this.selectedItems.get(0);
+
+		if (selectedIndex < 0 || selectedIndex >= this.items.size()) {
 			return;
-		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-		if (count == 0)
+		}
+
+		Rectangle visibleArea = getVisibleArea();
+		int lineHeight = getLineHeight();
+
+		int visibleStartIndex = this.topIndex;
+		int visibleEndIndex = Math.min(this.topIndex + visibleArea.height / lineHeight, this.items.size() - 1);
+
+		if (selectedIndex >= visibleStartIndex && selectedIndex <= visibleEndIndex) {
 			return;
-		int height = (int) OS.SendMessage(handle, OS.LB_GETITEMHEIGHT, 0, 0);
-		forceResize();
-		RECT rect = new RECT();
-		OS.GetClientRect(handle, rect);
-		int topIndex = (int) OS.SendMessage(handle, OS.LB_GETTOPINDEX, 0, 0);
-		int visibleCount = Math.max(rect.bottom / height, 1);
-		int bottomIndex = Math.min(topIndex + visibleCount, count) - 1;
-		if (topIndex <= index && index <= bottomIndex)
-			return;
-		int newTop = Math.min(Math.max(index - (visibleCount / 2), 0), count - 1);
-		OS.SendMessage(handle, OS.LB_SETTOPINDEX, newTop, 0);
+		}
+
+		int centerOffset = (visibleArea.height / lineHeight) / 2;
+		this.topIndex = Math.max(0,
+				Math.min(selectedIndex - centerOffset, this.items.size() - visibleArea.height / lineHeight));
+
+		redraw();
 	}
 
-	@Override
-	void updateMenuLocation(Event event) {
-		Rectangle clientArea = getClientAreaInPixels();
-		int x = clientArea.x, y = clientArea.y;
-		int focusIndex = getFocusIndex();
-		if (focusIndex != -1) {
-			RECT rect = new RECT();
-			long newFont, oldFont = 0;
-			long hDC = OS.GetDC(handle);
-			newFont = OS.SendMessage(handle, OS.WM_GETFONT, 0, 0);
-			if (newFont != 0)
-				oldFont = OS.SelectObject(hDC, newFont);
-			int flags = OS.DT_CALCRECT | OS.DT_SINGLELINE | OS.DT_NOPREFIX;
-			char[] buffer = new char[64 + 1];
-			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, focusIndex, 0);
-			if (length != OS.LB_ERR) {
-				if (length + 1 > buffer.length) {
-					buffer = new char[length + 1];
-				}
-				int result = (int) OS.SendMessage(handle, OS.LB_GETTEXT, focusIndex, buffer);
-				if (result != OS.LB_ERR) {
-					OS.DrawText(hDC, buffer, length, rect, flags);
-				}
-			}
-			if (newFont != 0)
-				OS.SelectObject(hDC, oldFont);
-			OS.ReleaseDC(handle, hDC);
-			x = Math.max(x, rect.right / 2);
-			x = Math.min(x, clientArea.x + clientArea.width);
-
-			OS.SendMessage(handle, OS.LB_GETITEMRECT, focusIndex, rect);
-			y = Math.max(y, rect.bottom);
-			y = Math.min(y, clientArea.y + clientArea.height);
-		}
-		Point pt = toDisplayInPixels(x, y);
-		int zoom = getZoom();
-		event.setLocation(DPIUtil.scaleDown(pt.x, zoom), DPIUtil.scaleDown(pt.y, zoom));
-	}
-
-//	@Override
-//	boolean updateTextDirection(int textDirection) {
-//		if (textDirection == AUTO_TEXT_DIRECTION) {
-//			/* If auto is already in effect, there's nothing to do. */
-//			if ((state & HAS_AUTO_DIRECTION) != 0)
-//				return false;
-//			state |= HAS_AUTO_DIRECTION;
-//		} else {
-//			state &= ~HAS_AUTO_DIRECTION;
-//			if (!addedUCC /* (state & HAS_AUTO_DIRECTION) == 0 */) {
-//				return super.updateTextDirection(textDirection);
-//			}
-//		}
-//		int count = (int) OS.SendMessage(handle, OS.LB_GETCOUNT, 0, 0);
-//		if (count == OS.LB_ERR)
-//			return false;
-//		int selection = (int) OS.SendMessage(handle, OS.LB_GETCURSEL, 0, 0);
-//		addedUCC = false;
-//		while (count-- > 0) {
-//			int length = (int) OS.SendMessage(handle, OS.LB_GETTEXTLEN, count, 0);
-//			if (length == OS.LB_ERR)
-//				break;
-//			if (length == 0)
-//				continue;
-//			char[] buffer = new char[length + 1];
-//			if (OS.SendMessage(handle, OS.LB_GETTEXT, count, buffer) == OS.LB_ERR)
-//				break;
-//			if (OS.SendMessage(handle, OS.LB_DELETESTRING, count, 0) == OS.LB_ERR)
-//				break;
-//			if ((state & HAS_AUTO_DIRECTION) == 0) {
-//				/* Should remove UCC */
-//				System.arraycopy(buffer, 1, buffer, 0, length);
-//			}
-//			/* Adding UCC is handled in OS.LB_INSERTSTRING */
-//			if (OS.SendMessage(handle, OS.LB_INSERTSTRING, count, buffer) == OS.LB_ERR)
-//				break;
-//		}
-//		if (selection != OS.LB_ERR) {
-//			OS.SendMessage(handle, OS.LB_SETCURSEL, selection, 0);
-//		}
-//		return textDirection == AUTO_TEXT_DIRECTION || super.updateTextDirection(textDirection);
-//	}
-
-	@Override
-	int widgetStyle() {
-		int bits = super.widgetStyle() | OS.LBS_NOTIFY | OS.LBS_NOINTEGRALHEIGHT;
-		if ((style & SWT.SINGLE) != 0)
-			return bits;
-		if ((style & SWT.MULTI) != 0) {
-			if ((style & SWT.SIMPLE) != 0)
-				return bits | OS.LBS_MULTIPLESEL;
-			return bits | OS.LBS_EXTENDEDSEL;
-		}
-		return bits;
-	}
 }
