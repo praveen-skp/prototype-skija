@@ -76,7 +76,28 @@ public class List extends Scrollable implements ICustomWidget {
 			}
 		});
 
+		addMouseWheelListener(e -> {
+			List.this.onMouseWheel(e);
+		});
+
 		addListener(SWT.Resize, event -> redraw());
+	}
+
+	private void onMouseWheel(MouseEvent e) {
+		if (verticalBar != null) {
+			int scrollAmount = e.count > 0 ? -1 : 1;
+			this.topIndex = Math.max(0,
+					Math.min(this.topIndex + scrollAmount, this.items.size() - getVisibleLineCount()));
+			redraw();
+		}
+	}
+
+	private int getVisibleLineCount() {
+		Rectangle clientArea = getClientArea();
+		GC gc = new GC(this);
+		int lineHeight = getLineHeight();
+		gc.dispose();
+		return (lineHeight > 0) ? clientArea.height / lineHeight : 0;
 	}
 
 	private void paintControl(PaintEvent e) {
@@ -344,7 +365,7 @@ public class List extends Scrollable implements ICustomWidget {
 
 		if (verticalBar != null) {
 			int thumb = clientArea.height / getLineHeight();
-			verticalBar.setMaximum(this.items.size());
+			verticalBar.setMaximum(this.items.size() - 1);
 			verticalBar.setMinimum(0);
 			verticalBar.setThumb(thumb);
 			verticalBar.setVisible(maxTextSize.y > clientArea.height);
@@ -355,7 +376,12 @@ public class List extends Scrollable implements ICustomWidget {
 			horizontalBar.setMinimum(0);
 			horizontalBar.setThumb(clientArea.width / maxTextSize.x);
 			horizontalBar.setVisible(maxTextSize.x > clientArea.width);
+			horizontalBar.setIncrement(getCharacterWidth());
 		}
+	}
+
+	private int getCharacterWidth() {
+		return getTextWidth("a");
 	}
 
 	public void add(String string, int index) {
