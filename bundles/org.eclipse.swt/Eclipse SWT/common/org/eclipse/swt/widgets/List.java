@@ -49,7 +49,7 @@ public class List extends Scrollable implements ICustomWidget {
 			horizontalBar.addSelectionListener(new SelectionAdapter() {
 				@Override
 				public void widgetSelected(SelectionEvent e) {
-					List.this.scrollBarSelectionChanged(e);
+					List.this.onScrollBarChange(e);
 				}
 			});
 		}
@@ -59,7 +59,7 @@ public class List extends Scrollable implements ICustomWidget {
 				@Override
 				public void widgetSelected(SelectionEvent e) {
 					List.this.topIndex = verticalBar.getSelection();
-					List.this.scrollBarSelectionChanged(e);
+					List.this.onScrollBarChange(e);
 				}
 			});
 		}
@@ -76,15 +76,7 @@ public class List extends Scrollable implements ICustomWidget {
 			}
 		});
 
-		addListener(SWT.Resize, event -> {
-			if (event.type == SWT.Resize) {
-				onResize();
-			}
-		});
-	}
-
-	private void onResize() {
-		redraw();
+		addListener(SWT.Resize, event -> redraw());
 	}
 
 	private void paintControl(PaintEvent e) {
@@ -174,29 +166,26 @@ public class List extends Scrollable implements ICustomWidget {
 		return x;
 	}
 
-	private void onKeyPressed(KeyEvent event) {
-	}
-
 	private void onKeyReleased(KeyEvent event) {
 		boolean isShiftPressed = (event.stateMask & SWT.SHIFT) != 0;
 		switch (event.keyCode) {
-		case SWT.ARROW_DOWN -> handleArrowKeys(1, isShiftPressed);
-		case SWT.ARROW_UP -> handleArrowKeys(-1, isShiftPressed);
+		case SWT.ARROW_DOWN -> navigateSelection(1, isShiftPressed);
+		case SWT.ARROW_UP -> navigateSelection(-1, isShiftPressed);
 		default -> {
 		}
 		}
 		redraw();
 	}
 
-	private void handleArrowKeys(int offset, boolean isShiftPressed) {
-		if (isShiftPressed) {
-			selectMultipleLine(offset);
+	private void navigateSelection(int direction, boolean extendSelection) {
+		if (extendSelection) {
+			extendSelectionRange(direction);
 		} else {
-			moveSelectedLine(offset);
+			moveSelection(direction);
 		}
 	}
 
-	private void selectMultipleLine(int offset) {
+	private void extendSelectionRange(int offset) {
 		int newIndex = calculateNewIndex(this.lastSelectedItem, offset);
 		if (this.selectedItems.contains(newIndex)) {
 			this.selectedItems.remove(Integer.valueOf(newIndex - offset));
@@ -206,7 +195,7 @@ public class List extends Scrollable implements ICustomWidget {
 		this.lastSelectedItem = newIndex;
 	}
 
-	private void moveSelectedLine(int offset) {
+	private void moveSelection(int offset) {
 		if (this.selectedItems.size() == 1) {
 			int currentIndex = selectedItems.iterator().next();
 			selectedItems.clear();
@@ -219,7 +208,7 @@ public class List extends Scrollable implements ICustomWidget {
 		return Math.max(0, Math.min(newIndex, items.size() - 1));
 	}
 
-	private void scrollBarSelectionChanged(SelectionEvent e) {
+	private void onScrollBarChange(SelectionEvent e) {
 		redraw();
 	}
 
@@ -230,15 +219,15 @@ public class List extends Scrollable implements ICustomWidget {
 	private void onMouseUp(MouseEvent e) {
 		if ((e.stateMask & SWT.BUTTON1) != 0) {
 			if ((e.stateMask & SWT.CTRL) != 0) {
-				handleCtrlClick(e.x, e.y);
+				toggleSelection(e.x, e.y);
 			} else {
-				toggleSelectedLine(e);
+				selectSingleItem(e);
 			}
 		}
 		redraw();
 	}
 
-	private void handleCtrlClick(int x, int y) {
+	private void toggleSelection(int x, int y) {
 		int clickedLine = getTextLocation(x, y);
 		if (clickedLine >= 0 && clickedLine < this.items.size()) {
 			if (this.selectedItems.contains(clickedLine)) {
@@ -250,7 +239,7 @@ public class List extends Scrollable implements ICustomWidget {
 		}
 	}
 
-	private void toggleSelectedLine(MouseEvent e) {
+	private void selectSingleItem(MouseEvent e) {
 		Integer selectedLine = Integer.valueOf(getTextLocation(e.x, e.y));
 		this.selectedItems.clear();
 		this.selectedItems.add(selectedLine);
@@ -276,28 +265,28 @@ public class List extends Scrollable implements ICustomWidget {
 		return gc.textExtent(this.items.get(0)).y;
 	}
 
-	private void adjustCanvasSize(GC gc) {
-		Point maxTextExtent = new Point(0, 0);
-
-		for (String line : items) {
-			Point extent = gc.textExtent(line);
-			maxTextExtent.x = Math.max(maxTextExtent.x, extent.x);
-			maxTextExtent.y += extent.y;
-		}
-
-		ScrollBar verticalBar = getVerticalBar();
-		ScrollBar horizontalBar = getHorizontalBar();
-
-		if (verticalBar != null) {
-			verticalBar.setMaximum(maxTextExtent.y);
-		}
-		if (horizontalBar != null) {
-			horizontalBar.setMaximum(maxTextExtent.x);
-		}
-
-		// Adjust canvas size to fit content
-		this.setSize(maxTextExtent.x + 20, maxTextExtent.y + 20); // Add padding
-	}
+//	private void adjustCanvasSize(GC gc) {
+//		Point maxTextExtent = new Point(0, 0);
+//
+//		for (String line : items) {
+//			Point extent = gc.textExtent(line);
+//			maxTextExtent.x = Math.max(maxTextExtent.x, extent.x);
+//			maxTextExtent.y += extent.y;
+//		}
+//
+//		ScrollBar verticalBar = getVerticalBar();
+//		ScrollBar horizontalBar = getHorizontalBar();
+//
+//		if (verticalBar != null) {
+//			verticalBar.setMaximum(maxTextExtent.y);
+//		}
+//		if (horizontalBar != null) {
+//			horizontalBar.setMaximum(maxTextExtent.x);
+//		}
+//
+//		// Adjust canvas size to fit content
+//		this.setSize(maxTextExtent.x + 20, maxTextExtent.y + 20); // Add padding
+//	}
 
 	public void add(String string) {
 		checkWidget();
@@ -376,6 +365,7 @@ public class List extends Scrollable implements ICustomWidget {
 		if (index == -1)
 			error(SWT.ERROR_INVALID_RANGE);
 		this.items.add(index, string);
+		updateScrollBarWithTextSize();
 		redraw();
 	}
 
