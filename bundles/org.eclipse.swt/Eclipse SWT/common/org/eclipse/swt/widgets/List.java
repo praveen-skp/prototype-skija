@@ -6,7 +6,6 @@ import org.eclipse.swt.*;
 import org.eclipse.swt.events.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.*;
-import org.eclipse.swt.internal.win32.*;
 
 public class List extends Scrollable implements ICustomWidget {
 	static final int INSET = 3;
@@ -21,16 +20,6 @@ public class List extends Scrollable implements ICustomWidget {
 	public List(Composite parent, int style) {
 		super(parent, checkStyle(style));
 		addListeners();
-//		showScrollBar();
-	}
-
-	private void showScrollBar() {
-		if (verticalBar != null) {
-			verticalBar.setVisible(true);
-		}
-		if (horizontalBar != null) {
-			horizontalBar.setVisible(true);
-		}
 	}
 
 	private void addListeners() {
@@ -80,7 +69,10 @@ public class List extends Scrollable implements ICustomWidget {
 			List.this.onMouseWheel(e);
 		});
 
-		addListener(SWT.Resize, event -> redraw());
+		addListener(SWT.Resize, event -> {
+			updateScrollBarWithTextSize();
+			redraw();
+		});
 	}
 
 	private void onMouseWheel(MouseEvent e) {
@@ -114,39 +106,19 @@ public class List extends Scrollable implements ICustomWidget {
 		if (r.width == 0 && r.height == 0) {
 			return;
 		}
-		Rectangle visibleArea = getVisibleArea();
-		drawText(e, visibleArea);
-	}
-
-	private Rectangle getVisibleArea() {
-		Rectangle clientArea = getClientArea();
-
-//		ScrollBar horizontalBar = getHorizontalBar();
-//		ScrollBar verticalBar = getVerticalBar();
-//
-//		int hOffset = (horizontalBar != null) ? horizontalBar.getSelection() : 0;
-//		int vOffset = (verticalBar != null) ? verticalBar.getSelection() : 0;
-//
-//		clientArea.x += hOffset;
-//		clientArea.y += vOffset;
-
-		return clientArea;
-	}
-
-	private void drawText(PaintEvent e, Rectangle visibleArea) {
 		for (int i = 0; i < this.items.size(); i++) {
-			drawTextLine(items.get(i), i, e.x, e.y, visibleArea, e.gc);
+			drawTextLine(items.get(i), i, e.x, e.y, e.gc);
 		}
 	}
 
-	private void drawTextLine(String text, int lineNumber, int x, int y, Rectangle visibleArea, GC gc) {
+	private void drawTextLine(String text, int lineNumber, int x, int y, GC gc) {
 		Point textExtent = gc.textExtent(text);
 		Rectangle clientArea = getClientArea();
 
 		int _x = calculateHorizontalAlignment(x, textExtent, clientArea);
-		int _y = y + lineNumber * textExtent.y - visibleArea.y;
+		int _y = y + lineNumber * textExtent.y - clientArea.y;
 
-		_x -= visibleArea.x;
+		_x -= clientArea.x;
 
 		if ((style & SWT.BORDER) != 0) {
 			int borderWidth = getBorderWidth();
@@ -268,8 +240,8 @@ public class List extends Scrollable implements ICustomWidget {
 	}
 
 	private int getTextLocation(int selectedX, int selectedY) {
-		Rectangle visibleArea = getVisibleArea();
-		int y = Math.max(selectedY + visibleArea.y, 0);
+		Rectangle clientArea = getClientArea();
+		int y = Math.max(selectedY + clientArea.y, 0);
 
 		GC gc = new GC(this);
 		String[] textLines = this.items.toArray(new String[0]);
@@ -285,29 +257,6 @@ public class List extends Scrollable implements ICustomWidget {
 		}
 		return gc.textExtent(this.items.get(0)).y;
 	}
-
-//	private void adjustCanvasSize(GC gc) {
-//		Point maxTextExtent = new Point(0, 0);
-//
-//		for (String line : items) {
-//			Point extent = gc.textExtent(line);
-//			maxTextExtent.x = Math.max(maxTextExtent.x, extent.x);
-//			maxTextExtent.y += extent.y;
-//		}
-//
-//		ScrollBar verticalBar = getVerticalBar();
-//		ScrollBar horizontalBar = getHorizontalBar();
-//
-//		if (verticalBar != null) {
-//			verticalBar.setMaximum(maxTextExtent.y);
-//		}
-//		if (horizontalBar != null) {
-//			horizontalBar.setMaximum(maxTextExtent.x);
-//		}
-//
-//		// Adjust canvas size to fit content
-//		this.setSize(maxTextExtent.x + 20, maxTextExtent.y + 20); // Add padding
-//	}
 
 	public void add(String string) {
 		checkWidget();
@@ -362,6 +311,8 @@ public class List extends Scrollable implements ICustomWidget {
 	private void updateScrollBarWithTextSize() {
 		Rectangle clientArea = getClientArea();
 		Point maxTextSize = computeTextSize();
+		System.out.println("Height: " + clientArea.height + " " + maxTextSize.y);
+		System.out.println("Width: " + clientArea.width + " " + maxTextSize.x);
 
 		if (verticalBar != null) {
 			int thumb = clientArea.height / getLineHeight();
@@ -376,12 +327,7 @@ public class List extends Scrollable implements ICustomWidget {
 			horizontalBar.setMinimum(0);
 			horizontalBar.setThumb(clientArea.width / maxTextSize.x);
 			horizontalBar.setVisible(maxTextSize.x > clientArea.width);
-			horizontalBar.setIncrement(getCharacterWidth());
 		}
-	}
-
-	private int getCharacterWidth() {
-		return getTextWidth("a");
 	}
 
 	public void add(String string, int index) {
@@ -544,7 +490,12 @@ public class List extends Scrollable implements ICustomWidget {
 			error(SWT.ERROR_NULL_ARGUMENT);
 		if (indices.length == 0)
 			return;
-		this.items.removeAll(Arrays.asList(indices));
+		java.util.List<String> indicesToRemove = new ArrayList<>();
+		for (int index : indices) {
+			indicesToRemove.add(String.valueOf(index));
+		}
+
+		this.items.removeAll(indicesToRemove);
 		redraw();
 	}
 
@@ -817,19 +768,19 @@ public class List extends Scrollable implements ICustomWidget {
 			return;
 		}
 
-		Rectangle visibleArea = getVisibleArea();
+		Rectangle clientArea = getClientArea();
 		int lineHeight = getLineHeight();
 
 		int visibleStartIndex = this.topIndex;
-		int visibleEndIndex = Math.min(this.topIndex + visibleArea.height / lineHeight, this.items.size() - 1);
+		int visibleEndIndex = Math.min(this.topIndex + clientArea.height / lineHeight, this.items.size() - 1);
 
 		if (selectedIndex >= visibleStartIndex && selectedIndex <= visibleEndIndex) {
 			return;
 		}
 
-		int centerOffset = (visibleArea.height / lineHeight) / 2;
+		int centerOffset = (clientArea.height / lineHeight) / 2;
 		this.topIndex = Math.max(0,
-				Math.min(selectedIndex - centerOffset, this.items.size() - visibleArea.height / lineHeight));
+				Math.min(selectedIndex - centerOffset, this.items.size() - clientArea.height / lineHeight));
 
 		redraw();
 	}
