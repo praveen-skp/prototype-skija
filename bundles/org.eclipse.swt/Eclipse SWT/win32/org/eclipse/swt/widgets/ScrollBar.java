@@ -91,7 +91,7 @@ import org.eclipse.swt.internal.win32.*;
  *      information</a>
  * @noextend This class is not intended to be subclassed by clients.
  */
-public class ScrollBar extends Widget {
+public class ScrollBar extends Widget implements ICustomWidget {
 	Scrollable parent;
 	int increment, pageIncrement;
 
@@ -190,32 +190,32 @@ public class ScrollBar extends Widget {
 		 */
 	}
 
-	@Override
-	void destroyWidget() {
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		OS.ShowScrollBar(hwnd, type, false);
-		parent.destroyScrollBar(style);
-		releaseHandle();
-	}
+//	@Override
+//	void destroyWidget() {
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+////		OS.ShowScrollBar(hwnd, type, false);
+//		parent.destroyScrollBar(style);
+//		releaseHandle();
+//	}
 
-	Rectangle getBounds() {
-//	checkWidget ();
-		parent.forceResize();
-		RECT rect = new RECT();
-		OS.GetClientRect(parent.scrolledHandle(), rect);
-		int x = 0, y = 0, width, height;
-		if ((style & SWT.HORIZONTAL) != 0) {
-			y = rect.bottom - rect.top;
-			width = rect.right - rect.left;
-			height = getSystemMetrics(OS.SM_CYHSCROLL);
-		} else {
-			x = rect.right - rect.left;
-			width = getSystemMetrics(OS.SM_CXVSCROLL);
-			height = rect.bottom - rect.top;
-		}
-		return new Rectangle(x, y, width, height);
-	}
+//	Rectangle getBounds() {
+////	checkWidget ();
+//		parent.forceResize();
+//		RECT rect = new RECT();
+//		OS.GetClientRect(parent.scrolledHandle(), rect);
+//		int x = 0, y = 0, width, height;
+//		if ((style & SWT.HORIZONTAL) != 0) {
+//			y = rect.bottom - rect.top;
+//			width = rect.right - rect.left;
+//			height = getSystemMetrics(OS.SM_CYHSCROLL);
+//		} else {
+//			x = rect.right - rect.left;
+//			width = getSystemMetrics(OS.SM_CXVSCROLL);
+//			height = rect.bottom - rect.top;
+//		}
+//		return new Rectangle(x, y, width, height);
+//	}
 
 	/**
 	 * Returns <code>true</code> if the receiver is enabled, and <code>false</code>
@@ -234,10 +234,10 @@ public class ScrollBar extends Widget {
 	 *
 	 * @see #isEnabled
 	 */
-	public boolean getEnabled() {
-		checkWidget();
-		return (state & DISABLED) == 0;
-	}
+//	public boolean getEnabled() {
+//		checkWidget();
+//		return (state & DISABLED) == 0;
+//	}
 
 	/**
 	 * Returns the amount that the receiver's value will be modified by when the
@@ -253,10 +253,10 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public int getIncrement() {
-		checkWidget();
-		return increment;
-	}
+//	public int getIncrement() {
+//		checkWidget();
+//		return increment;
+//	}
 
 	/**
 	 * Returns the maximum value which the receiver will allow.
@@ -271,16 +271,16 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public int getMaximum() {
-		checkWidget();
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		info.fMask = OS.SIF_RANGE;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		OS.GetScrollInfo(hwnd, type, info);
-		return info.nMax;
-	}
+//	public int getMaximum() {
+//		checkWidget();
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		info.fMask = OS.SIF_RANGE;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+////		OS.GetScrollInfo(hwnd, type, info);
+//		return info.nMax;
+//	}
 
 	/**
 	 * Returns the minimum value which the receiver will allow.
@@ -295,16 +295,16 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public int getMinimum() {
-		checkWidget();
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		info.fMask = OS.SIF_RANGE;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		OS.GetScrollInfo(hwnd, type, info);
-		return info.nMin;
-	}
+//	public int getMinimum() {
+//		checkWidget();
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		info.fMask = OS.SIF_RANGE;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		OS.GetScrollInfo(hwnd, type, info);
+//		return info.nMin;
+//	}
 
 	/**
 	 * Returns the amount that the receiver's value will be modified by when the
@@ -320,10 +320,10 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public int getPageIncrement() {
-		checkWidget();
-		return pageIncrement;
-	}
+//	public int getPageIncrement() {
+//		checkWidget();
+//		return pageIncrement;
+//	}
 
 	/**
 	 * Returns the receiver's parent, which must be a Scrollable.
@@ -356,16 +356,16 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public int getSelection() {
-		checkWidget();
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		info.fMask = OS.SIF_POS;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		OS.GetScrollInfo(hwnd, type, info);
-		return info.nPos;
-	}
+//	public int getSelection() {
+//		checkWidget();
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		info.fMask = OS.SIF_POS;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+////		OS.GetScrollInfo(hwnd, type, info);
+//		return info.nPos;
+//	}
 
 	/**
 	 * Returns a point describing the receiver's size. The x coordinate of the
@@ -382,25 +382,25 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public Point getSize() {
-		checkWidget();
-		return DPIUtil.scaleDown(getSizeInPixels(), getZoom());
-	}
+//	public Point getSize() {
+//		checkWidget();
+//		return DPIUtil.scaleDown(getSizeInPixels(), getZoom());
+//	}
 
-	Point getSizeInPixels() {
-		parent.forceResize();
-		RECT rect = new RECT();
-		OS.GetClientRect(parent.scrolledHandle(), rect);
-		int width, height;
-		if ((style & SWT.HORIZONTAL) != 0) {
-			width = rect.right - rect.left;
-			height = getSystemMetrics(OS.SM_CYHSCROLL);
-		} else {
-			width = getSystemMetrics(OS.SM_CXVSCROLL);
-			height = rect.bottom - rect.top;
-		}
-		return new Point(width, height);
-	}
+//	Point getSizeInPixels() {
+//		parent.forceResize();
+//		RECT rect = new RECT();
+//		OS.GetClientRect(parent.scrolledHandle(), rect);
+//		int width, height;
+//		if ((style & SWT.HORIZONTAL) != 0) {
+//			width = rect.right - rect.left;
+//			height = getSystemMetrics(OS.SM_CYHSCROLL);
+//		} else {
+//			width = getSystemMetrics(OS.SM_CXVSCROLL);
+//			height = rect.bottom - rect.top;
+//		}
+//		return new Point(width, height);
+//	}
 
 	/**
 	 * Returns the receiver's thumb value.
@@ -417,18 +417,18 @@ public class ScrollBar extends Widget {
 	 *
 	 * @see ScrollBar
 	 */
-	public int getThumb() {
-		checkWidget();
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		info.fMask = OS.SIF_PAGE;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		OS.GetScrollInfo(hwnd, type, info);
-		if (info.nPage != 0)
-			--info.nPage;
-		return info.nPage;
-	}
+//	public int getThumb() {
+//		checkWidget();
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		info.fMask = OS.SIF_PAGE;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+////		OS.GetScrollInfo(hwnd, type, info);
+//		if (info.nPage != 0)
+//			--info.nPage;
+//		return info.nPage;
+//	}
 
 	/**
 	 * Returns a rectangle describing the size and location of the receiver's thumb
@@ -446,37 +446,37 @@ public class ScrollBar extends Widget {
 	 *
 	 * @since 3.6
 	 */
-	public Rectangle getThumbBounds() {
-		checkWidget();
-		return DPIUtil.scaleDown(getThumbBoundsInPixels(), getZoom());
-	}
+//	public Rectangle getThumbBounds() {
+//		checkWidget();
+//		return DPIUtil.scaleDown(getThumbBoundsInPixels(), getZoom());
+//	}
 
-	Rectangle getThumbBoundsInPixels() {
-		parent.forceResize();
-		SCROLLBARINFO info = new SCROLLBARINFO();
-		info.cbSize = SCROLLBARINFO.sizeof;
-		int x, y, width, height;
-		if ((style & SWT.HORIZONTAL) != 0) {
-			OS.GetScrollBarInfo(parent.handle, OS.OBJID_HSCROLL, info);
-			x = info.rcScrollBar.left + info.xyThumbTop;
-			y = info.rcScrollBar.top;
-			width = info.xyThumbBottom - info.xyThumbTop;
-			height = info.rcScrollBar.bottom - info.rcScrollBar.top;
-		} else {
-			OS.GetScrollBarInfo(parent.handle, OS.OBJID_VSCROLL, info);
-			x = info.rcScrollBar.left;
-			y = info.rcScrollBar.top + info.xyThumbTop;
-			width = info.rcScrollBar.right - info.rcScrollBar.left;
-			height = info.xyThumbBottom - info.xyThumbTop;
-		}
-		RECT rect = new RECT();
-		rect.left = x;
-		rect.top = y;
-		rect.right = x + width;
-		rect.bottom = y + height;
-		OS.MapWindowPoints(0, parent.handle, rect, 2);
-		return new Rectangle(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-	}
+//	Rectangle getThumbBoundsInPixels() {
+//		parent.forceResize();
+//		SCROLLBARINFO info = new SCROLLBARINFO();
+//		info.cbSize = SCROLLBARINFO.sizeof;
+//		int x, y, width, height;
+//		if ((style & SWT.HORIZONTAL) != 0) {
+//			OS.GetScrollBarInfo(parent.handle, OS.OBJID_HSCROLL, info);
+//			x = info.rcScrollBar.left + info.xyThumbTop;
+//			y = info.rcScrollBar.top;
+//			width = info.xyThumbBottom - info.xyThumbTop;
+//			height = info.rcScrollBar.bottom - info.rcScrollBar.top;
+//		} else {
+//			OS.GetScrollBarInfo(parent.handle, OS.OBJID_VSCROLL, info);
+//			x = info.rcScrollBar.left;
+//			y = info.rcScrollBar.top + info.xyThumbTop;
+//			width = info.rcScrollBar.right - info.rcScrollBar.left;
+//			height = info.xyThumbBottom - info.xyThumbTop;
+//		}
+//		RECT rect = new RECT();
+//		rect.left = x;
+//		rect.top = y;
+//		rect.right = x + width;
+//		rect.bottom = y + height;
+//		OS.MapWindowPoints(0, parent.handle, rect, 2);
+//		return new Rectangle(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+//	}
 
 	/**
 	 * Returns a rectangle describing the size and location of the receiver's thumb
@@ -495,51 +495,52 @@ public class ScrollBar extends Widget {
 	 *
 	 * @since 3.6
 	 */
-	public Rectangle getThumbTrackBounds() {
-		checkWidget();
-		return DPIUtil.scaleDown(getThumbTrackBoundsInPixels(), getZoom());
-	}
+//	public Rectangle getThumbTrackBounds() {
+//		return null;
+////		checkWidget();
+////		return DPIUtil.scaleDown(getThumbTrackBoundsInPixels(), getZoom());
+//	}
 
-	Rectangle getThumbTrackBoundsInPixels() {
-		parent.forceResize();
-		SCROLLBARINFO info = new SCROLLBARINFO();
-		info.cbSize = SCROLLBARINFO.sizeof;
-		int x = 0, y = 0, width, height;
-		if ((style & SWT.HORIZONTAL) != 0) {
-			OS.GetScrollBarInfo(parent.handle, OS.OBJID_HSCROLL, info);
-			int size = getSystemMetrics(OS.SM_CYHSCROLL);
-			y = info.rcScrollBar.top;
-			width = info.rcScrollBar.right - info.rcScrollBar.left;
-			height = size;
-			if (width <= 2 * size) {
-				x = info.rcScrollBar.left + width / 2;
-				width = 0;
-			} else {
-				x = info.rcScrollBar.left + size;
-				width -= 2 * size;
-			}
-		} else {
-			OS.GetScrollBarInfo(parent.handle, OS.OBJID_VSCROLL, info);
-			int size = getSystemMetrics(OS.SM_CYVSCROLL);
-			x = info.rcScrollBar.left;
-			width = size;
-			height = info.rcScrollBar.bottom - info.rcScrollBar.top;
-			if (height <= 2 * size) {
-				y = info.rcScrollBar.top + height / 2;
-				height = 0;
-			} else {
-				y = info.rcScrollBar.top + size;
-				height -= 2 * size;
-			}
-		}
-		RECT rect = new RECT();
-		rect.left = x;
-		rect.top = y;
-		rect.right = x + width;
-		rect.bottom = y + height;
-		OS.MapWindowPoints(0, parent.handle, rect, 2);
-		return new Rectangle(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-	}
+//	Rectangle getThumbTrackBoundsInPixels() {
+//		parent.forceResize();
+//		SCROLLBARINFO info = new SCROLLBARINFO();
+//		info.cbSize = SCROLLBARINFO.sizeof;
+//		int x = 0, y = 0, width, height;
+//		if ((style & SWT.HORIZONTAL) != 0) {
+//			OS.GetScrollBarInfo(parent.handle, OS.OBJID_HSCROLL, info);
+//			int size = getSystemMetrics(OS.SM_CYHSCROLL);
+//			y = info.rcScrollBar.top;
+//			width = info.rcScrollBar.right - info.rcScrollBar.left;
+//			height = size;
+//			if (width <= 2 * size) {
+//				x = info.rcScrollBar.left + width / 2;
+//				width = 0;
+//			} else {
+//				x = info.rcScrollBar.left + size;
+//				width -= 2 * size;
+//			}
+//		} else {
+//			OS.GetScrollBarInfo(parent.handle, OS.OBJID_VSCROLL, info);
+//			int size = getSystemMetrics(OS.SM_CYVSCROLL);
+//			x = info.rcScrollBar.left;
+//			width = size;
+//			height = info.rcScrollBar.bottom - info.rcScrollBar.top;
+//			if (height <= 2 * size) {
+//				y = info.rcScrollBar.top + height / 2;
+//				height = 0;
+//			} else {
+//				y = info.rcScrollBar.top + size;
+//				height -= 2 * size;
+//			}
+//		}
+//		RECT rect = new RECT();
+//		rect.left = x;
+//		rect.top = y;
+//		rect.right = x + width;
+//		rect.bottom = y + height;
+//		OS.MapWindowPoints(0, parent.handle, rect, 2);
+//		return new Rectangle(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+//	}
 
 	/**
 	 * Returns <code>true</code> if the receiver is visible, and <code>false</code>
@@ -561,17 +562,18 @@ public class ScrollBar extends Widget {
 	 *                         </ul>
 	 */
 	public boolean getVisible() {
-		checkWidget();
-		SCROLLBARINFO psbi = new SCROLLBARINFO();
-		psbi.cbSize = SCROLLBARINFO.sizeof;
-		int idObject = (style & SWT.VERTICAL) != 0 ? OS.OBJID_VSCROLL : OS.OBJID_HSCROLL;
-		OS.GetScrollBarInfo(hwndScrollBar(), idObject, psbi);
-		return (psbi.rgstate[0] & OS.STATE_SYSTEM_INVISIBLE) == 0;
+		return true;
+//		checkWidget();
+//		SCROLLBARINFO psbi = new SCROLLBARINFO();
+//		psbi.cbSize = SCROLLBARINFO.sizeof;
+//		int idObject = (style & SWT.VERTICAL) != 0 ? OS.OBJID_VSCROLL : OS.OBJID_HSCROLL;
+////		OS.GetScrollBarInfo(hwndScrollBar(), idObject, psbi);
+//		return (psbi.rgstate[0] & OS.STATE_SYSTEM_INVISIBLE) == 0;
 	}
 
-	long hwndScrollBar() {
-		return parent.scrolledHandle();
-	}
+//	long hwndScrollBar() {
+//		return parent.scrolledHandle();
+//	}
 
 	/**
 	 * Returns <code>true</code> if the receiver is enabled and all of the
@@ -591,10 +593,10 @@ public class ScrollBar extends Widget {
 	 *
 	 * @see #getEnabled
 	 */
-	public boolean isEnabled() {
-		checkWidget();
-		return getEnabled() && parent.isEnabled();
-	}
+//	public boolean isEnabled() {
+//		checkWidget();
+//		return getEnabled() && parent.isEnabled();
+//	}
 
 	/**
 	 * Returns <code>true</code> if the receiver is visible and all of the
@@ -617,20 +619,20 @@ public class ScrollBar extends Widget {
 		return getVisible() && parent.isVisible();
 	}
 
-	@Override
-	void releaseHandle() {
-		super.releaseHandle();
-		parent = null;
-	}
+//	@Override
+//	void releaseHandle() {
+//		super.releaseHandle();
+//		parent = null;
+//	}
 
-	@Override
-	void releaseParent() {
-		super.releaseParent();
-		if (parent.horizontalBar == this)
-			parent.horizontalBar = null;
-		if (parent.verticalBar == this)
-			parent.verticalBar = null;
-	}
+//	@Override
+//	void releaseParent() {
+//		super.releaseParent();
+//		if (parent.horizontalBar == this)
+//			parent.horizontalBar = null;
+//		if (parent.verticalBar == this)
+//			parent.verticalBar = null;
+//	}
 
 	/**
 	 * Removes the listener from the collection of listeners who will be notified
@@ -684,18 +686,18 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setEnabled(boolean enabled) {
-		checkWidget();
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		int flags = enabled ? OS.ESB_ENABLE_BOTH : OS.ESB_DISABLE_BOTH;
-		OS.EnableScrollBar(hwnd, type, flags);
-		if (enabled) {
-			state &= ~DISABLED;
-		} else {
-			state |= DISABLED;
-		}
-	}
+//	public void setEnabled(boolean enabled) {
+//		checkWidget();
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		int flags = enabled ? OS.ESB_ENABLE_BOTH : OS.ESB_DISABLE_BOTH;
+//		OS.EnableScrollBar(hwnd, type, flags);
+//		if (enabled) {
+//			state &= ~DISABLED;
+//		} else {
+//			state |= DISABLED;
+//		}
+//	}
 
 	/**
 	 * Sets the amount that the receiver's value will be modified by when the
@@ -712,12 +714,12 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setIncrement(int value) {
-		checkWidget();
-		if (value < 1)
-			return;
-		increment = value;
-	}
+//	public void setIncrement(int value) {
+//		checkWidget();
+//		if (value < 1)
+//			return;
+//		increment = value;
+//	}
 
 	/**
 	 * Sets the maximum. If this value is negative or less than or equal to the
@@ -734,21 +736,21 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setMaximum(int value) {
-		checkWidget();
-		if (value < 0)
-			return;
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		info.fMask = OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
-		OS.GetScrollInfo(hwnd, type, info);
-		if (value - info.nMin - info.nPage < 1)
-			return;
-		info.nMax = value;
-		SetScrollInfo(hwnd, type, info, true);
-	}
+//	public void setMaximum(int value) {
+//		checkWidget();
+//		if (value < 0)
+//			return;
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		info.fMask = OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
+//		OS.GetScrollInfo(hwnd, type, info);
+//		if (value - info.nMin - info.nPage < 1)
+//			return;
+//		info.nMax = value;
+//		SetScrollInfo(hwnd, type, info, true);
+//	}
 
 	/**
 	 * Sets the minimum value. If this value is negative or greater than or equal to
@@ -765,21 +767,21 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setMinimum(int value) {
-		checkWidget();
-		if (value < 0)
-			return;
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		info.fMask = OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
-		OS.GetScrollInfo(hwnd, type, info);
-		if (info.nMax - value - info.nPage < 1)
-			return;
-		info.nMin = value;
-		SetScrollInfo(hwnd, type, info, true);
-	}
+//	public void setMinimum(int value) {
+//		checkWidget();
+//		if (value < 0)
+//			return;
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		info.fMask = OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
+//		OS.GetScrollInfo(hwnd, type, info);
+//		if (info.nMax - value - info.nPage < 1)
+//			return;
+//		info.nMin = value;
+//		SetScrollInfo(hwnd, type, info, true);
+//	}
 
 	/**
 	 * Sets the amount that the receiver's value will be modified by when the page
@@ -796,14 +798,15 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setPageIncrement(int value) {
-		checkWidget();
-		if (value < 1)
-			return;
-		pageIncrement = value;
-	}
+//	public void setPageIncrement(int value) {
+//		checkWidget();
+//		if (value < 1)
+//			return;
+//		pageIncrement = value;
+//	}
 
-	boolean SetScrollInfo(long hwnd, int flags, SCROLLINFO info, boolean fRedraw) {
+//	boolean SetScrollInfo(long hwnd, int flags, SCROLLINFO info, boolean fRedraw) {
+//		return true;
 		/*
 		 * Bug in Windows. For some reason, when SetScrollInfo() is used with SIF_POS
 		 * and the scroll bar is hidden, the opposite scroll bar is incorrectly made
@@ -811,58 +814,58 @@ public class ScrollBar extends Widget {
 		 * operation is performed), the opposite scroll bar draws. The fix is to hide
 		 * both scroll bars.
 		 */
-		boolean barVisible = false;
-		boolean visible = getVisible();
-
-		ScrollBar bar = null;
-		switch (flags) {
-		case OS.SB_HORZ:
-			bar = parent.getVerticalBar();
-			break;
-		case OS.SB_VERT:
-			bar = parent.getHorizontalBar();
-			break;
-		}
-		barVisible = bar != null && bar.getVisible();
-		if (!visible || (state & DISABLED) != 0)
-			fRedraw = false;
-		boolean result = OS.SetScrollInfo(hwnd, flags, info, fRedraw);
-
-		/*
-		 * Bug in Windows. For some reason, when the widget is a standard scroll bar,
-		 * and SetScrollInfo() is called with SIF_RANGE or SIF_PAGE, the widget is
-		 * incorrectly made visible so that the next time the parent is resized (or
-		 * another scroll bar operation is performed), the scroll bar draws. The fix is
-		 * to hide the scroll bar (again) when already hidden.
-		 */
-		if (!visible) {
-			OS.ShowScrollBar(hwnd, !barVisible ? OS.SB_BOTH : flags, false);
-		}
-
-		/*
-		 * Bug in Windows. When only one scroll bar is visible, and the thumb changes
-		 * using SIF_RANGE or SIF_PAGE from being visible to hidden, the opposite scroll
-		 * bar is incorrectly made visible. The next time the parent is resized (or
-		 * another scroll bar operation is performed), the opposite scroll bar draws.
-		 * The fix is to hide the opposite scroll bar again.
-		 *
-		 * NOTE: This problem only happens on Vista
-		 */
-		if (visible && bar != null && !barVisible) {
-			OS.ShowScrollBar(hwnd, flags == OS.SB_HORZ ? OS.SB_VERT : OS.SB_HORZ, false);
-		}
-
-		/*
-		 * Feature in Windows. Using SIF_DISABLENOSCROLL, SetScrollInfo () can change
-		 * enabled and disabled state of the scroll bar causing a scroll bar that was
-		 * disabled by the application to become enabled. The fix is to disable the
-		 * scroll bar (again) when the application has disabled the scroll bar.
-		 */
-		if ((state & DISABLED) != 0) {
-			OS.EnableScrollBar(hwnd, flags, OS.ESB_DISABLE_BOTH);
-		}
-		return result;
-	}
+//		boolean barVisible = false;
+//		boolean visible = getVisible();
+//
+//		ScrollBar bar = null;
+//		switch (flags) {
+//		case OS.SB_HORZ:
+//			bar = parent.getVerticalBar();
+//			break;
+//		case OS.SB_VERT:
+//			bar = parent.getHorizontalBar();
+//			break;
+//		}
+//		barVisible = bar != null && bar.getVisible();
+//		if (!visible || (state & DISABLED) != 0)
+//			fRedraw = false;
+//		boolean result = OS.SetScrollInfo(hwnd, flags, info, fRedraw);
+//
+//		/*
+//		 * Bug in Windows. For some reason, when the widget is a standard scroll bar,
+//		 * and SetScrollInfo() is called with SIF_RANGE or SIF_PAGE, the widget is
+//		 * incorrectly made visible so that the next time the parent is resized (or
+//		 * another scroll bar operation is performed), the scroll bar draws. The fix is
+//		 * to hide the scroll bar (again) when already hidden.
+//		 */
+//		if (!visible) {
+//			OS.ShowScrollBar(hwnd, !barVisible ? OS.SB_BOTH : flags, false);
+//		}
+//
+//		/*
+//		 * Bug in Windows. When only one scroll bar is visible, and the thumb changes
+//		 * using SIF_RANGE or SIF_PAGE from being visible to hidden, the opposite scroll
+//		 * bar is incorrectly made visible. The next time the parent is resized (or
+//		 * another scroll bar operation is performed), the opposite scroll bar draws.
+//		 * The fix is to hide the opposite scroll bar again.
+//		 *
+//		 * NOTE: This problem only happens on Vista
+//		 */
+//		if (visible && bar != null && !barVisible) {
+//			OS.ShowScrollBar(hwnd, flags == OS.SB_HORZ ? OS.SB_VERT : OS.SB_HORZ, false);
+//		}
+//
+//		/*
+//		 * Feature in Windows. Using SIF_DISABLENOSCROLL, SetScrollInfo () can change
+//		 * enabled and disabled state of the scroll bar causing a scroll bar that was
+//		 * disabled by the application to become enabled. The fix is to disable the
+//		 * scroll bar (again) when the application has disabled the scroll bar.
+//		 */
+//		if ((state & DISABLED) != 0) {
+//			OS.EnableScrollBar(hwnd, flags, OS.ESB_DISABLE_BOTH);
+//		}
+//		return result;
+//	}
 
 	/**
 	 * Sets the single <em>selection</em> that is the receiver's value to the
@@ -878,16 +881,16 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setSelection(int selection) {
-		checkWidget();
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		info.fMask = OS.SIF_POS;
-		info.nPos = selection;
-		SetScrollInfo(hwnd, type, info, true);
-	}
+//	public void setSelection(int selection) {
+//		checkWidget();
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		info.fMask = OS.SIF_POS;
+//		info.nPos = selection;
+//		SetScrollInfo(hwnd, type, info, true);
+//	}
 
 	/**
 	 * Sets the thumb value. The thumb value should be used to represent the size of
@@ -909,21 +912,21 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setThumb(int value) {
-		checkWidget();
-		if (value < 1)
-			return;
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		info.fMask = OS.SIF_PAGE | OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
-		OS.GetScrollInfo(hwnd, type, info);
-		info.nPage = value;
-		if (info.nPage != 0)
-			info.nPage++;
-		SetScrollInfo(hwnd, type, info, true);
-	}
+//	public void setThumb(int value) {
+//		checkWidget();
+//		if (value < 1)
+//			return;
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		info.fMask = OS.SIF_PAGE | OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
+//		OS.GetScrollInfo(hwnd, type, info);
+//		info.nPage = value;
+//		if (info.nPage != 0)
+//			info.nPage++;
+//		SetScrollInfo(hwnd, type, info, true);
+//	}
 
 	/**
 	 * Sets the receiver's selection, minimum value, maximum value, thumb, increment
@@ -949,33 +952,33 @@ public class ScrollBar extends Widget {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 */
-	public void setValues(int selection, int minimum, int maximum, int thumb, int increment, int pageIncrement) {
-		checkWidget();
-		if (minimum < 0)
-			return;
-		if (maximum < 0)
-			return;
-		if (thumb < 1)
-			return;
-		if (increment < 1)
-			return;
-		if (pageIncrement < 1)
-			return;
-		this.increment = increment;
-		this.pageIncrement = pageIncrement;
-		SCROLLINFO info = new SCROLLINFO();
-		info.cbSize = SCROLLINFO.sizeof;
-		info.fMask = OS.SIF_POS | OS.SIF_PAGE | OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
-		info.nPos = selection;
-		info.nMin = minimum;
-		info.nMax = maximum;
-		info.nPage = thumb;
-		if (info.nPage != 0)
-			info.nPage++;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		SetScrollInfo(hwnd, type, info, true);
-	}
+//	public void setValues(int selection, int minimum, int maximum, int thumb, int increment, int pageIncrement) {
+//		checkWidget();
+//		if (minimum < 0)
+//			return;
+//		if (maximum < 0)
+//			return;
+//		if (thumb < 1)
+//			return;
+//		if (increment < 1)
+//			return;
+//		if (pageIncrement < 1)
+//			return;
+//		this.increment = increment;
+//		this.pageIncrement = pageIncrement;
+//		SCROLLINFO info = new SCROLLINFO();
+//		info.cbSize = SCROLLINFO.sizeof;
+//		info.fMask = OS.SIF_POS | OS.SIF_PAGE | OS.SIF_RANGE | OS.SIF_DISABLENOSCROLL;
+//		info.nPos = selection;
+//		info.nMin = minimum;
+//		info.nMax = maximum;
+//		info.nPage = thumb;
+//		if (info.nPage != 0)
+//			info.nPage++;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		SetScrollInfo(hwnd, type, info, true);
+//	}
 
 	/**
 	 * Marks the receiver as visible if the argument is <code>true</code>, and marks
@@ -997,100 +1000,101 @@ public class ScrollBar extends Widget {
 	 *                         </ul>
 	 */
 	public void setVisible(boolean visible) {
-		checkWidget();
-		if (visible == getVisible())
-			return;
-		/*
-		 * Set the state bits before calling ShowScrollBar () because hiding and showing
-		 * the scroll bar can cause WM_SIZE messages when the client area is resized.
-		 * Setting the state before the call means that code that runs during WM_SIZE
-		 * that queries the visibility of the scroll bar will get the correct value.
-		 */
-		state = visible ? state & ~HIDDEN : state | HIDDEN;
-		long hwnd = hwndScrollBar();
-		int type = scrollBarType();
-		/*
-		 * Bug in Windows 7. Windows will cause pixel corruption when there is only one
-		 * scroll bar visible and it is hidden. The fix is to temporarily show the other
-		 * scroll bar and hide both.
-		 */
-		if (!visible) {
-			if (OS.IsAppThemed()) {
-				SCROLLBARINFO psbi = new SCROLLBARINFO();
-				psbi.cbSize = SCROLLBARINFO.sizeof;
-				int idObject = (style & SWT.VERTICAL) != 0 ? OS.OBJID_HSCROLL : OS.OBJID_VSCROLL;
-				OS.GetScrollBarInfo(hwnd, idObject, psbi);
-				if ((psbi.rgstate[0] & OS.STATE_SYSTEM_INVISIBLE) != 0) {
-					OS.ShowScrollBar(hwnd, type == OS.SB_VERT ? OS.SB_HORZ : OS.SB_VERT, true);
-					type = OS.SB_BOTH;
-				}
-			}
-		}
-		if (OS.ShowScrollBar(hwnd, type, visible)) {
-			/*
-			 * Bug in Windows. For some reason, when the widget is a standard scroll bar,
-			 * and SetScrollInfo () is called with SIF_RANGE or SIF_PAGE while the widget is
-			 * not visible, the widget is incorrectly disabled even though the values for
-			 * SIF_RANGE and SIF_PAGE, when set for a visible scroll bar would not disable
-			 * the scroll bar. The fix is to enable the scroll bar when not disabled by the
-			 * application and the current scroll bar ranges would cause the scroll bar to
-			 * be enabled had they been set when the scroll bar was visible.
-			 */
-			if ((state & DISABLED) == 0) {
-				SCROLLINFO info = new SCROLLINFO();
-				info.cbSize = SCROLLINFO.sizeof;
-				info.fMask = OS.SIF_RANGE | OS.SIF_PAGE;
-				OS.GetScrollInfo(hwnd, type, info);
-				if (info.nMax - info.nMin - info.nPage >= 0) {
-					OS.EnableScrollBar(hwnd, type, OS.ESB_ENABLE_BOTH);
-				}
-			}
-			sendEvent(visible ? SWT.Show : SWT.Hide);
-			// widget could be disposed at this point
-		}
+//		checkWidget();
+//		if (visible == getVisible())
+//			return;
+//		/*
+//		 * Set the state bits before calling ShowScrollBar () because hiding and showing
+//		 * the scroll bar can cause WM_SIZE messages when the client area is resized.
+//		 * Setting the state before the call means that code that runs during WM_SIZE
+//		 * that queries the visibility of the scroll bar will get the correct value.
+//		 */
+//		state = visible ? state & ~HIDDEN : state | HIDDEN;
+//		long hwnd = hwndScrollBar();
+//		int type = scrollBarType();
+//		/*
+//		 * Bug in Windows 7. Windows will cause pixel corruption when there is only one
+//		 * scroll bar visible and it is hidden. The fix is to temporarily show the other
+//		 * scroll bar and hide both.
+//		 */
+//		if (!visible) {
+//			if (OS.IsAppThemed()) {
+//				SCROLLBARINFO psbi = new SCROLLBARINFO();
+//				psbi.cbSize = SCROLLBARINFO.sizeof;
+//				int idObject = (style & SWT.VERTICAL) != 0 ? OS.OBJID_HSCROLL : OS.OBJID_VSCROLL;
+//				OS.GetScrollBarInfo(hwnd, idObject, psbi);
+//				if ((psbi.rgstate[0] & OS.STATE_SYSTEM_INVISIBLE) != 0) {
+//					OS.ShowScrollBar(hwnd, type == OS.SB_VERT ? OS.SB_HORZ : OS.SB_VERT, true);
+//					type = OS.SB_BOTH;
+//				}
+//			}
+//		}
+//		if (OS.ShowScrollBar(hwnd, type, visible)) {
+//			/*
+//			 * Bug in Windows. For some reason, when the widget is a standard scroll bar,
+//			 * and SetScrollInfo () is called with SIF_RANGE or SIF_PAGE while the widget is
+//			 * not visible, the widget is incorrectly disabled even though the values for
+//			 * SIF_RANGE and SIF_PAGE, when set for a visible scroll bar would not disable
+//			 * the scroll bar. The fix is to enable the scroll bar when not disabled by the
+//			 * application and the current scroll bar ranges would cause the scroll bar to
+//			 * be enabled had they been set when the scroll bar was visible.
+//			 */
+//			if ((state & DISABLED) == 0) {
+//				SCROLLINFO info = new SCROLLINFO();
+//				info.cbSize = SCROLLINFO.sizeof;
+//				info.fMask = OS.SIF_RANGE | OS.SIF_PAGE;
+//				OS.GetScrollInfo(hwnd, type, info);
+//				if (info.nMax - info.nMin - info.nPage >= 0) {
+//					OS.EnableScrollBar(hwnd, type, OS.ESB_ENABLE_BOTH);
+//				}
+//			}
+//			sendEvent(visible ? SWT.Show : SWT.Hide);
+//			// widget could be disposed at this point
+//		}
 	}
 
 	LRESULT wmScrollChild(long wParam, long lParam) {
-
-		/* Do nothing when scrolling is ending */
-		int code = OS.LOWORD(wParam);
-		if (code == OS.SB_ENDSCROLL)
-			return null;
-
-		/*
-		 * Send the event because WM_HSCROLL and WM_VSCROLL are sent from a modal
-		 * message loop in Windows that is active when the user is scrolling.
-		 */
-		Event event = new Event();
-		switch (code) {
-		case OS.SB_THUMBPOSITION:
-			event.detail = SWT.NONE;
-			break;
-		case OS.SB_THUMBTRACK:
-			event.detail = SWT.DRAG;
-			break;
-		case OS.SB_TOP:
-			event.detail = SWT.HOME;
-			break;
-		case OS.SB_BOTTOM:
-			event.detail = SWT.END;
-			break;
-		case OS.SB_LINEDOWN:
-			event.detail = SWT.ARROW_DOWN;
-			break;
-		case OS.SB_LINEUP:
-			event.detail = SWT.ARROW_UP;
-			break;
-		case OS.SB_PAGEDOWN:
-			event.detail = SWT.PAGE_DOWN;
-			break;
-		case OS.SB_PAGEUP:
-			event.detail = SWT.PAGE_UP;
-			break;
-		}
-		sendSelectionEvent(SWT.Selection, event, true);
-		// the widget could be destroyed at this point
 		return null;
+
+//		/* Do nothing when scrolling is ending */
+//		int code = OS.LOWORD(wParam);
+//		if (code == OS.SB_ENDSCROLL)
+//			return null;
+//
+//		/*
+//		 * Send the event because WM_HSCROLL and WM_VSCROLL are sent from a modal
+//		 * message loop in Windows that is active when the user is scrolling.
+//		 */
+//		Event event = new Event();
+//		switch (code) {
+//		case OS.SB_THUMBPOSITION:
+//			event.detail = SWT.NONE;
+//			break;
+//		case OS.SB_THUMBTRACK:
+//			event.detail = SWT.DRAG;
+//			break;
+//		case OS.SB_TOP:
+//			event.detail = SWT.HOME;
+//			break;
+//		case OS.SB_BOTTOM:
+//			event.detail = SWT.END;
+//			break;
+//		case OS.SB_LINEDOWN:
+//			event.detail = SWT.ARROW_DOWN;
+//			break;
+//		case OS.SB_LINEUP:
+//			event.detail = SWT.ARROW_UP;
+//			break;
+//		case OS.SB_PAGEDOWN:
+//			event.detail = SWT.PAGE_DOWN;
+//			break;
+//		case OS.SB_PAGEUP:
+//			event.detail = SWT.PAGE_UP;
+//			break;
+//		}
+//		sendSelectionEvent(SWT.Selection, event, true);
+//		// the widget could be destroyed at this point
+//		return null;
 	}
 
 	public void handleEvent(Event e) {

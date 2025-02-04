@@ -148,12 +148,12 @@ public abstract class Scrollable extends Control {
 //	});
 	}
 
-	@Override
-	long callWindowProc(long hwnd, int msg, long wParam, long lParam) {
-		if (handle == 0)
-			return 0;
-		return OS.DefWindowProc(hwnd, msg, wParam, lParam);
-	}
+//	@Override
+//	long callWindowProc(long hwnd, int msg, long wParam, long lParam) {
+//		if (handle == 0)
+//			return 0;
+//		return OS.DefWindowProc(hwnd, msg, wParam, lParam);
+//	}
 
 	/**
 	 * Given a desired <em>client area</em> for the receiver (as described by the
@@ -207,17 +207,17 @@ public abstract class Scrollable extends Control {
 		return new Rectangle(rect.left, rect.top, nWidth, nHeight);
 	}
 
-	@Override
-	void createHandle() {
-		super.createHandle();
-		maybeEnableDarkSystemTheme();
-	}
+//	@Override
+//	void createHandle() {
+//		super.createHandle();
+//		maybeEnableDarkSystemTheme();
+//	}
 
 	ScrollBar createScrollBar(int type) {
 		ScrollBar bar = new ScrollBar(this, type);
 		if ((state & CANVAS) != 0) {
-			bar.setMaximum(100);
-			bar.setThumb(10);
+//			bar.setMaximum(100);
+//			bar.setThumb(10);
 		}
 		return bar;
 	}
@@ -231,19 +231,19 @@ public abstract class Scrollable extends Control {
 			verticalBar = createScrollBar(SWT.V_SCROLL);
 	}
 
-	@Override
-	void updateBackgroundColor() {
-		switch (applyThemeBackground()) {
-		case 0:
-			state &= ~THEME_BACKGROUND;
-			break;
-		case 1:
-			state |= THEME_BACKGROUND;
-			break;
-		default: /* No change */
-		}
-		super.updateBackgroundColor();
-	}
+//	@Override
+//	void updateBackgroundColor() {
+//		switch (applyThemeBackground()) {
+//		case 0:
+//			state &= ~THEME_BACKGROUND;
+//			break;
+//		case 1:
+//			state |= THEME_BACKGROUND;
+//			break;
+//		default: /* No change */
+//		}
+//		super.updateBackgroundColor();
+//	}
 
 	/**
 	 * @return
@@ -283,29 +283,30 @@ public abstract class Scrollable extends Control {
 	 *                         the thread that created the receiver</li>
 	 *                         </ul>
 	 *
-	 * @see #computeTrim
+	 *                         // * @see #computeTrim
 	 */
 	public Rectangle getClientArea() {
-		checkWidget();
-		return DPIUtil.scaleDown(getClientAreaInPixels(), getZoom());
+		return new Rectangle(5, 5, 50, 50);
+//		checkWidget();
+//		return DPIUtil.scaleDown(getClientAreaInPixels(), getZoom());
 	}
 
-	Rectangle getClientAreaInPixels() {
-		forceResize();
-		RECT rect = new RECT();
-		long scrolledHandle = scrolledHandle();
-		OS.GetClientRect(scrolledHandle, rect);
-		int x = rect.left, y = rect.top;
-		int width = rect.right - rect.left;
-		int height = rect.bottom - rect.top;
-		if (scrolledHandle != handle) {
-			OS.GetClientRect(handle, rect);
-			OS.MapWindowPoints(handle, scrolledHandle, rect, 2);
-			x = -rect.left;
-			y = -rect.top;
-		}
-		return new Rectangle(x, y, width, height);
-	}
+//	Rectangle getClientAreaInPixels() {
+//		forceResize();
+//		RECT rect = new RECT();
+//		long scrolledHandle = scrolledHandle();
+//		OS.GetClientRect(scrolledHandle, rect);
+//		int x = rect.left, y = rect.top;
+//		int width = rect.right - rect.left;
+//		int height = rect.bottom - rect.top;
+//		if (scrolledHandle != handle) {
+//			OS.GetClientRect(handle, rect);
+//			OS.MapWindowPoints(handle, scrolledHandle, rect, 2);
+//			x = -rect.left;
+//			y = -rect.top;
+//		}
+//		return new Rectangle(x, y, width, height);
+//	}
 
 	/**
 	 * Returns the receiver's horizontal scroll bar if it has one, and null if it
@@ -424,109 +425,109 @@ public abstract class Scrollable extends Control {
 		return handle;
 	}
 
-	@Override
-	int widgetStyle() {
-		int bits = super.widgetStyle() | OS.WS_TABSTOP;
-		if ((style & SWT.H_SCROLL) != 0)
-			bits |= OS.WS_HSCROLL;
-		if ((style & SWT.V_SCROLL) != 0)
-			bits |= OS.WS_VSCROLL;
-		return bits;
-	}
+//	@Override
+//	int widgetStyle() {
+//		int bits = super.widgetStyle() | OS.WS_TABSTOP;
+//		if ((style & SWT.H_SCROLL) != 0)
+//			bits |= OS.WS_HSCROLL;
+//		if ((style & SWT.V_SCROLL) != 0)
+//			bits |= OS.WS_VSCROLL;
+//		return bits;
+//	}
 
-	@Override
-	TCHAR windowClass() {
-		return display.windowClass;
-	}
+//	@Override
+//	TCHAR windowClass() {
+//		return display.windowClass;
+//	}
 
-	@Override
-	long windowProc() {
-		return display.windowProc;
-	}
+//	@Override
+//	long windowProc() {
+//		return display.windowProc;
+//	}
 
-	@Override
-	LRESULT WM_HSCROLL(long wParam, long lParam) {
-		LRESULT result = super.WM_HSCROLL(wParam, lParam);
-		if (result != null)
-			return result;
-		if (horizontalBar != null && lParam == 0) {
-			return wmScroll(horizontalBar, (state & CANVAS) != 0, handle, OS.WM_HSCROLL, wParam, lParam);
-		}
-		return result;
-	}
+//	@Override
+//	LRESULT WM_HSCROLL(long wParam, long lParam) {
+//		LRESULT result = super.WM_HSCROLL(wParam, lParam);
+//		if (result != null)
+//			return result;
+////		if (horizontalBar != null && lParam == 0) {
+////			return wmScroll(horizontalBar, (state & CANVAS) != 0, handle, OS.WM_HSCROLL, wParam, lParam);
+////		}
+//		return result;
+//	}
 
-	@Override
-	LRESULT WM_MOUSEWHEEL(long wParam, long lParam) {
-		return wmScrollWheel((state & CANVAS) != 0, wParam, lParam, false);
-	}
+//	@Override
+//	LRESULT WM_MOUSEWHEEL(long wParam, long lParam) {
+//		return wmScrollWheel((state & CANVAS) != 0, wParam, lParam, false);
+//	}
+//
+//	@Override
+//	LRESULT WM_MOUSEHWHEEL(long wParam, long lParam) {
+//		return wmScrollWheel((state & CANVAS) != 0, -1 * wParam, lParam, true);
+//	}
 
-	@Override
-	LRESULT WM_MOUSEHWHEEL(long wParam, long lParam) {
-		return wmScrollWheel((state & CANVAS) != 0, -1 * wParam, lParam, true);
-	}
+//	@Override
+//	LRESULT WM_SIZE(long wParam, long lParam) {
+//		long code = callWindowProc(handle, OS.WM_SIZE, wParam, lParam);
+//		super.WM_SIZE(wParam, lParam);
+//		// widget may be disposed at this point
+//		if (code == 0)
+//			return LRESULT.ZERO;
+//		return new LRESULT(code);
+//	}
 
-	@Override
-	LRESULT WM_SIZE(long wParam, long lParam) {
-		long code = callWindowProc(handle, OS.WM_SIZE, wParam, lParam);
-		super.WM_SIZE(wParam, lParam);
-		// widget may be disposed at this point
-		if (code == 0)
-			return LRESULT.ZERO;
-		return new LRESULT(code);
-	}
+//	@Override
+//	LRESULT WM_VSCROLL(long wParam, long lParam) {
+//		LRESULT result = super.WM_VSCROLL(wParam, lParam);
+//		if (result != null)
+//			return result;
+////		if (verticalBar != null && lParam == 0) {
+////			return wmScroll(verticalBar, (state & CANVAS) != 0, handle, OS.WM_VSCROLL, wParam, lParam);
+////		}
+//		return result;
+//	}
 
-	@Override
-	LRESULT WM_VSCROLL(long wParam, long lParam) {
-		LRESULT result = super.WM_VSCROLL(wParam, lParam);
-		if (result != null)
-			return result;
-		if (verticalBar != null && lParam == 0) {
-			return wmScroll(verticalBar, (state & CANVAS) != 0, handle, OS.WM_VSCROLL, wParam, lParam);
-		}
-		return result;
-	}
-
-	LRESULT wmScrollWheel(boolean update, long wParam, long lParam, boolean horzWheel) {
-		LRESULT result = horzWheel ? super.WM_MOUSEHWHEEL(wParam, lParam) : super.WM_MOUSEWHEEL(wParam, lParam);
-		if (result != null)
-			return result;
-		/*
-		 * Translate WM_MOUSEWHEEL and WM_MOUSEHWHEEL to WM_VSCROLL or WM_HSCROLL.
-		 */
-		if (update) {
-			if ((wParam & OS.MK_CONTROL) != 0) {
-				return null;
-			}
-			if ((wParam & OS.MK_SHIFT) != 0) {
-				horzWheel = !horzWheel;
-			}
-
-			boolean vertical;
-			if (verticalBar != null && verticalBar.getEnabled() && !horzWheel) {
-				vertical = true;
-			} else if (horizontalBar != null && horizontalBar.getEnabled() && horzWheel) {
-				vertical = false;
-			} else {
-				return null;
-			}
-
-			ScrollBar bar = vertical ? verticalBar : horizontalBar;
-			MouseWheelData wheelData = new MouseWheelData(vertical, bar, wParam, display.scrollRemainderBar);
-
-			if (wheelData.count == 0)
-				return null;
-
-			SCROLLINFO info = new SCROLLINFO();
-			info.cbSize = SCROLLINFO.sizeof;
-			info.fMask = OS.SIF_POS;
-			OS.GetScrollInfo(handle, bar.scrollBarType(), info);
-			info.nPos -= wheelData.count;
-			OS.SetScrollInfo(handle, bar.scrollBarType(), info, true);
-
-			int msg = vertical ? OS.WM_VSCROLL : OS.WM_HSCROLL;
-			OS.SendMessage(handle, msg, OS.SB_THUMBPOSITION, 0);
-			return LRESULT.ZERO;
-		}
+//	LRESULT wmScrollWheel(boolean update, long wParam, long lParam, boolean horzWheel) {
+//		LRESULT result = horzWheel ? super.WM_MOUSEHWHEEL(wParam, lParam) : super.WM_MOUSEWHEEL(wParam, lParam);
+//		if (result != null)
+//			return result;
+//		/*
+//		 * Translate WM_MOUSEWHEEL and WM_MOUSEHWHEEL to WM_VSCROLL or WM_HSCROLL.
+//		 */
+//		if (update) {
+//			if ((wParam & OS.MK_CONTROL) != 0) {
+//				return null;
+//			}
+//			if ((wParam & OS.MK_SHIFT) != 0) {
+//				horzWheel = !horzWheel;
+//			}
+//
+//			boolean vertical;
+//			if (verticalBar != null && verticalBar.getEnabled() && !horzWheel) {
+//				vertical = true;
+//			} else if (horizontalBar != null && horizontalBar.getEnabled() && horzWheel) {
+//				vertical = false;
+//			} else {
+//				return null;
+//			}
+//
+//			ScrollBar bar = vertical ? verticalBar : horizontalBar;
+//			MouseWheelData wheelData = new MouseWheelData(vertical, bar, wParam, display.scrollRemainderBar);
+//
+//			if (wheelData.count == 0)
+//				return null;
+//
+//			SCROLLINFO info = new SCROLLINFO();
+//			info.cbSize = SCROLLINFO.sizeof;
+//			info.fMask = OS.SIF_POS;
+//			OS.GetScrollInfo(handle, bar.scrollBarType(), info);
+//			info.nPos -= wheelData.count;
+//			OS.SetScrollInfo(handle, bar.scrollBarType(), info, true);
+//
+//			int msg = vertical ? OS.WM_VSCROLL : OS.WM_HSCROLL;
+//			OS.SendMessage(handle, msg, OS.SB_THUMBPOSITION, 0);
+//			return LRESULT.ZERO;
+//		}
 
 		/*
 		 * When the native widget scrolls inside WM_MOUSEWHEEL, it may or may not send a
@@ -537,82 +538,82 @@ public abstract class Scrollable extends Control {
 		 * or WM_HSCROLL, then the application has already been notified. If not
 		 * explicitly send the event.
 		 */
-		int vPosition = verticalBar == null ? 0 : verticalBar.getSelection();
-		int hPosition = horizontalBar == null ? 0 : horizontalBar.getSelection();
-		long code = callWindowProc(handle, OS.WM_MOUSEWHEEL, wParam, lParam);
-		if (verticalBar != null) {
-			int position = verticalBar.getSelection();
-			if (position != vPosition) {
-				Event event = new Event();
-				event.detail = position < vPosition ? SWT.PAGE_UP : SWT.PAGE_DOWN;
-				verticalBar.sendSelectionEvent(SWT.Selection, event, true);
-			}
-		}
-		if (horizontalBar != null) {
-			int position = horizontalBar.getSelection();
-			if (position != hPosition) {
-				Event event = new Event();
-				event.detail = position < hPosition ? SWT.PAGE_UP : SWT.PAGE_DOWN;
-				horizontalBar.sendSelectionEvent(SWT.Selection, event, true);
-			}
-		}
-		return new LRESULT(code);
-	}
+//		int vPosition = verticalBar == null ? 0 : verticalBar.getSelection();
+//		int hPosition = horizontalBar == null ? 0 : horizontalBar.getSelection();
+//		long code = callWindowProc(handle, OS.WM_MOUSEWHEEL, wParam, lParam);
+//		if (verticalBar != null) {
+//			int position = verticalBar.getSelection();
+//			if (position != vPosition) {
+//				Event event = new Event();
+//				event.detail = position < vPosition ? SWT.PAGE_UP : SWT.PAGE_DOWN;
+//				verticalBar.sendSelectionEvent(SWT.Selection, event, true);
+//			}
+//		}
+//		if (horizontalBar != null) {
+//			int position = horizontalBar.getSelection();
+//			if (position != hPosition) {
+//				Event event = new Event();
+//				event.detail = position < hPosition ? SWT.PAGE_UP : SWT.PAGE_DOWN;
+//				horizontalBar.sendSelectionEvent(SWT.Selection, event, true);
+//			}
+//		}
+//		return new LRESULT(code);
+//	}
 
-	LRESULT wmScroll(ScrollBar bar, boolean update, long hwnd, int msg, long wParam, long lParam) {
-		LRESULT result = null;
-		if (update) {
-			int type = msg == OS.WM_HSCROLL ? OS.SB_HORZ : OS.SB_VERT;
-			SCROLLINFO info = new SCROLLINFO();
-			info.cbSize = SCROLLINFO.sizeof;
-			info.fMask = OS.SIF_TRACKPOS | OS.SIF_POS | OS.SIF_RANGE;
-			OS.GetScrollInfo(hwnd, type, info);
-			info.fMask = OS.SIF_POS;
-			int code = OS.LOWORD(wParam);
-			switch (code) {
-			case OS.SB_ENDSCROLL:
-				return null;
-			case OS.SB_THUMBPOSITION:
-			case OS.SB_THUMBTRACK:
-				info.nPos = info.nTrackPos;
-				break;
-			case OS.SB_TOP:
-				info.nPos = info.nMin;
-				break;
-			case OS.SB_BOTTOM:
-				info.nPos = info.nMax;
-				break;
-			case OS.SB_LINEDOWN:
-				info.nPos += bar.getIncrement();
-				break;
-			case OS.SB_LINEUP:
-				int increment = bar.getIncrement();
-				info.nPos = Math.max(info.nMin, info.nPos - increment);
-				break;
-			case OS.SB_PAGEDOWN:
-				info.nPos += bar.getPageIncrement();
-				break;
-			case OS.SB_PAGEUP:
-				int pageIncrement = bar.getPageIncrement();
-				info.nPos = Math.max(info.nMin, info.nPos - pageIncrement);
-				break;
-			}
-			OS.SetScrollInfo(hwnd, type, info, true);
-		} else {
-			long code = callWindowProc(hwnd, msg, wParam, lParam);
-			result = code == 0 ? LRESULT.ZERO : new LRESULT(code);
-		}
-		bar.wmScrollChild(wParam, lParam);
-		return result;
-	}
+//	LRESULT wmScroll(ScrollBar bar, boolean update, long hwnd, int msg, long wParam, long lParam) {
+//		LRESULT result = null;
+//		if (update) {
+//			int type = msg == OS.WM_HSCROLL ? OS.SB_HORZ : OS.SB_VERT;
+//			SCROLLINFO info = new SCROLLINFO();
+//			info.cbSize = SCROLLINFO.sizeof;
+//			info.fMask = OS.SIF_TRACKPOS | OS.SIF_POS | OS.SIF_RANGE;
+//			OS.GetScrollInfo(hwnd, type, info);
+//			info.fMask = OS.SIF_POS;
+//			int code = OS.LOWORD(wParam);
+//			switch (code) {
+//			case OS.SB_ENDSCROLL:
+//				return null;
+//			case OS.SB_THUMBPOSITION:
+//			case OS.SB_THUMBTRACK:
+//				info.nPos = info.nTrackPos;
+//				break;
+//			case OS.SB_TOP:
+//				info.nPos = info.nMin;
+//				break;
+//			case OS.SB_BOTTOM:
+//				info.nPos = info.nMax;
+//				break;
+//			case OS.SB_LINEDOWN:
+//				info.nPos += bar.getIncrement();
+//				break;
+//			case OS.SB_LINEUP:
+//				int increment = bar.getIncrement();
+//				info.nPos = Math.max(info.nMin, info.nPos - increment);
+//				break;
+//			case OS.SB_PAGEDOWN:
+//				info.nPos += bar.getPageIncrement();
+//				break;
+//			case OS.SB_PAGEUP:
+//				int pageIncrement = bar.getPageIncrement();
+//				info.nPos = Math.max(info.nMin, info.nPos - pageIncrement);
+//				break;
+//			}
+//			OS.SetScrollInfo(hwnd, type, info, true);
+//		} else {
+//			long code = callWindowProc(hwnd, msg, wParam, lParam);
+//			result = code == 0 ? LRESULT.ZERO : new LRESULT(code);
+//		}
+//		bar.wmScrollChild(wParam, lParam);
+//		return result;
+//	}
 
 	private void paintControl(Event e) {
-		if (verticalBar == null || horizontalBar == null) {
-			if ((style & SWT.H_SCROLL) != 0)
-				horizontalBar = createScrollBar(SWT.H_SCROLL);
-			if ((style & SWT.V_SCROLL) != 0)
-				verticalBar = createScrollBar(SWT.V_SCROLL);
-		}
+//		if (verticalBar == null || horizontalBar == null) {
+//			if ((style & SWT.H_SCROLL) != 0)
+//				horizontalBar = createScrollBar(SWT.H_SCROLL);
+//			if ((style & SWT.V_SCROLL) != 0)
+//				verticalBar = createScrollBar(SWT.V_SCROLL);
+//		}
 
 		if (verticalBar != null)
 			verticalBar.handleEvent(e);
