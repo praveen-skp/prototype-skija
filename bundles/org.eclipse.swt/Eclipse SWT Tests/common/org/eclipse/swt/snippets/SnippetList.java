@@ -1,0 +1,60 @@
+package org.eclipse.swt.snippets;
+
+/*******************************************************************************
+ * Copyright (c) 2000, 2006 IBM Corporation and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+/*
+ * Composite Snippet: inherit a background color or image
+ *
+ * For a list of all SWT example snippets see
+ * http://www.eclipse.org/swt/snippets/
+ *
+ * @since 3.2
+ */
+
+import org.eclipse.swt.*;
+import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.layout.*;
+import org.eclipse.swt.widgets.*;
+
+public class SnippetList {
+
+	public static void main(String[] args) {
+		final Display display = new Display();
+		final Shell shell = new Shell(display);
+		shell.setText("Composite.setBackgroundMode()");
+		shell.setLayout(new GridLayout(1, false));
+		shell.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+
+		createChildren(shell);
+
+		shell.pack();
+		shell.open();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch())
+				display.sleep();
+		}
+		display.dispose();
+	}
+
+	static void createChildren(Composite parent) {
+//		parent.setLayout(new GridLayout());
+		List list = new List(parent, SWT.FILL | SWT.BORDER | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+		list.add("Hi");
+		list.add("Hi Hello");
+		list.add("Hi Hello How");
+		list.add("Hi Hello How Are");
+		list.add("Hi Hello How Are You");
+		list.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+	}
+}
