@@ -1108,7 +1108,15 @@ public class ScrollBar extends Widget implements ICustomWidget {
 	}
 
 	private void onPaint(Event e) {
-		System.out.println("ScrollBar Paint");
+		Color background = e.gc.getBackground();
+		Color foreground = e.gc.getForeground();
+		e.gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_DARK_YELLOW));
+		e.gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_GREEN));
+		e.gc.drawRectangle(0, 0, 20, 40);
+		e.gc.fillRectangle(0, 0, 20, 40);
+		e.gc.setBackground(background);
+		e.gc.setForeground(foreground);
+
 	}
 
 }
